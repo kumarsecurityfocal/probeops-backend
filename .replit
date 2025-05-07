@@ -1,8 +1,8 @@
-modules = ["python-3.11"]
+modules = ["python-3.11", "python3"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["curl", "dig", "libxcrypt", "openssl", "postgresql", "traceroute", "whois", "iputils", "bind"]
+packages = ["bind", "curl", "dig", "iputils", "libxcrypt", "openssl", "postgresql", "traceroute", "whois"]
 
 [deployment]
 deploymentTarget = "autoscale"

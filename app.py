@@ -1,90 +1,128 @@
 """
-Main application entry point for ProbeOps FastAPI.
-This file initializes and configures the FastAPI application.
+ProbeOps API - Flask-based Network Diagnostics API with JWT Authentication and API Keys
 """
 import os
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from sqlalchemy.orm import Session
-from typing import Dict, Any
+import logging
+from datetime import datetime
 
-# Import database configuration
-from app.db.session import get_db, create_tables
-# Import routes
-from app.auth.routes import router as auth_router
-from app.probes.routes import router as probes_router
+from flask import Flask, jsonify, request, redirect, url_for
+from flask_cors import CORS
 
-# Lifespan event handler
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Lifespan events for the FastAPI application."""
-    print("Starting up ProbeOps API...")
-    print("Creating database tables if they don't exist...")
-    create_tables()
-    print("Database tables created successfully.")
-    yield
-    print("Shutting down ProbeOps API...")
+from app_config import create_app
+from models import db, User, ApiKey, ProbeJob
+from auth import current_user
 
-# Create FastAPI application
-app = FastAPI(
-    title="ProbeOps API",
-    description="Network diagnostics and probe operations API",
-    version="1.0.0",
-    lifespan=lifespan,
+# Import route blueprints
+from routes_user import bp as user_bp
+from routes_apikey import bp as apikey_bp
+from routes_probe import bp as probe_bp
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger(__name__)
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in development
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Create the Flask application
+app = create_app()
 
-# Include routers
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-app.include_router(probes_router, prefix="/probes", tags=["Probe Operations"])
+# Register blueprints
+app.register_blueprint(user_bp)
+app.register_blueprint(apikey_bp)
+app.register_blueprint(probe_bp)
 
-# Root endpoint
-@app.get("/", tags=["Root"])
-async def root() -> Dict[str, Any]:
-    """API root endpoint."""
-    return {
-        "message": "Welcome to ProbeOps API",
-        "documentation": "/docs",
-        "version": "1.0.0"
-    }
 
-# Health check endpoint
-@app.get("/health", tags=["Health"])
-async def health_check() -> Dict[str, Any]:
-    """Simple health check endpoint."""
-    return {
-        "status": "OK",
-        "message": "Service is running"
-    }
-
-# Database test endpoint
-@app.get("/db-test", tags=["Health"])
-async def db_test(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Test database connection."""
-    try:
-        # Just get a connection and verify it works
-        db.execute("SELECT 1")
-        return {
-            "status": "OK",
-            "message": "Database connection successful"
+@app.route('/')
+def root():
+    """API root endpoint"""
+    return jsonify({
+        "name": "ProbeOps API",
+        "version": "1.0.0",
+        "status": "online",
+        "authenticated": current_user is not None,
+        "user": current_user.username if current_user else None,
+        "endpoints": {
+            "auth": [
+                "/users/register",
+                "/users/login",
+                "/users/me"
+            ],
+            "api_keys": [
+                "/apikeys"
+            ],
+            "probes": [
+                "/probes/ping",
+                "/probes/traceroute",
+                "/probes/dns",
+                "/probes/whois",
+                "/probes/history"
+            ]
         }
-    except Exception as e:
-        return {
-            "status": "ERROR",
-            "message": f"Database connection failed: {str(e)}"
-        }
+    })
 
-# Run the application directly with uvicorn when this file is executed
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return jsonify({
+        "error": "Not found",
+        "message": "The requested resource was not found."
+    }), 404
+
+
+@app.errorhandler(500)
+def server_error(error):
+    """Handle 500 errors"""
+    logger.error(f"Server error: {str(error)}")
+    return jsonify({
+        "error": "Server error",
+        "message": "An internal server error occurred."
+    }), 500
+
+
+# Admin routes for server management
+@app.route('/admin/server_status')
+def server_status():
+    """Admin endpoint to check the server status"""
+    from subprocess import run, PIPE
+    
+    def run_command(cmd):
+        result = run(cmd, shell=True, stdout=PIPE, stderr=PIPE, text=True)
+        return result.stdout
+    
+    memory_info = run_command("free -h")
+    disk_info = run_command("df -h")
+    process_info = run_command("ps aux | grep python")
+    database_info = {
+        "users": User.query.count(),
+        "api_keys": ApiKey.query.count(),
+        "probe_jobs": ProbeJob.query.count()
+    }
+    
+    return jsonify({
+        "status": "running",
+        "memory": memory_info,
+        "disk": disk_info,
+        "processes": process_info,
+        "database": database_info
+    })
+
+
+# Required for gunicorn
+application = app
+
 if __name__ == "__main__":
-    import uvicorn
+    # For direct execution (not via gunicorn)
     port = int(os.environ.get("PORT", 5000))
-    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=True)
+    app.run(host="0.0.0.0", port=port, debug=True)
