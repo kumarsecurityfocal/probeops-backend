@@ -2,24 +2,37 @@
 Gunicorn configuration file for the FastAPI application.
 This configures gunicorn to use the uvicorn worker class which can handle ASGI applications.
 """
-import multiprocessing
-
-# Define the worker class to use
-worker_class = "uvicorn.workers.UvicornWorker"
-
-# Number of workers
-workers = multiprocessing.cpu_count() * 2 + 1
-if workers > 8:
-    workers = 8
-
-# Bind to this socket
+# Server socket settings
 bind = "0.0.0.0:5000"
+backlog = 2048
 
-# Other settings
+# Worker processes
+workers = 1
+worker_class = "uvicorn.workers.UvicornWorker"
+worker_connections = 1000
 timeout = 120
 keepalive = 5
-worker_connections = 1000
+
+# Server mechanics
+daemon = False
+pidfile = None
+umask = 0
+user = None
+group = None
+tmp_upload_dir = None
+
+# Logging
+loglevel = "info"
 accesslog = "-"
 errorlog = "-"
-loglevel = "info"
-reload = True
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+
+# Process naming
+proc_name = None
+
+# Server hooks
+def on_starting(server):
+    print("Starting the ProbeOps API server...")
+
+def on_reload(server):
+    print("Reloading the ProbeOps API server...")

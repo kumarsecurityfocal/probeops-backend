@@ -1,5 +1,11 @@
 """
-Main application entry point for ProbeOps FastAPI.
-This is just an import file for the modular FastAPI application.
+Main entry point for the ProbeOps API.
+This file imports the Flask app for use with gunicorn.
 """
-from app import app  # Import the app from the app module
+from flask_app import app
+
+# Required for gunicorn
+application = app
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
