@@ -1,50 +1,58 @@
-import subprocess
-from datetime import datetime
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import Dict, Any, List
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 
-from app.auth.dependencies import get_current_user
-from app.db.models import User, ProbeJob, ProbeResult
 from app.db.session import get_db
+from app.db.models import User, ProbeJob, ProbeResult
+from app.auth.dependencies import get_current_user
 from app.probes.schemas import (
-    PingRequest, TracerouteRequest, DnsRequest, WhoisRequest, 
-    CurlRequest, PortCheckRequest, ProbeResponse, ProbeJobResponse
+    PingRequest, 
+    TracerouteRequest, 
+    DnsRequest, 
+    WhoisRequest, 
+    CurlRequest, 
+    PortCheckRequest,
+    ProbeResponse,
+    ProbeJobResponse
 )
 from app.utils.command import (
-    run_ping, run_traceroute, run_dns_lookup, 
-    run_whois, run_curl, run_port_check
+    run_ping, 
+    run_traceroute, 
+    run_dns_lookup, 
+    run_whois, 
+    run_curl, 
+    run_port_check
 )
 from app.utils.response import format_response
 
+# Create router
 router = APIRouter()
 
-# Helper to save probe results
 def save_probe_result(db: Session, user_id: int, probe_type: str, target: str, result: str):
     """Save probe job and result to database"""
-    # Create new job
-    new_job = ProbeJob(
+    # Create the probe job
+    probe_job = ProbeJob(
         user_id=user_id,
         probe_type=probe_type,
-        target=target,
-        created_at=datetime.utcnow()
+        target=target
     )
     
-    db.add(new_job)
-    db.commit()
-    db.refresh(new_job)
+    # Add the job to the database
+    db.add(probe_job)
+    db.flush()  # Flush to get the job ID
     
-    # Create result linked to job
-    new_result = ProbeResult(
-        job_id=new_job.id,
-        result=result,
-        created_at=datetime.utcnow()
+    # Create the probe result
+    probe_result = ProbeResult(
+        job_id=probe_job.id,
+        result=result
     )
     
-    db.add(new_result)
+    # Add the result to the database
+    db.add(probe_result)
     db.commit()
     
-    return new_job, new_result
+    return probe_job.id
 
 @router.post("/ping", response_model=ProbeResponse)
 async def ping(
@@ -53,31 +61,14 @@ async def ping(
     current_user: User = Depends(get_current_user)
 ):
     """Run ping on a target host"""
-    try:
-        # Execute ping command
-        result = run_ping(request.host, request.count)
-        
-        # Save to database
-        job, _ = save_probe_result(
-            db=db, 
-            user_id=current_user.id, 
-            probe_type="ping", 
-            target=request.host,
-            result=result
-        )
-        
-        return format_response(
-            success=True,
-            probe_type="ping",
-            target=request.host,
-            result=result,
-            job_id=job.id
-        )
-    except subprocess.SubprocessError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error executing ping: {str(e)}"
-        )
+    result = run_ping(request.host, request.count)
+    success = not result.startswith("ERROR")
+    
+    # Save to database
+    job_id = save_probe_result(db, current_user.id, "ping", request.host, result)
+    
+    # Return response
+    return format_response(success, "ping", request.host, result, job_id)
 
 @router.post("/traceroute", response_model=ProbeResponse)
 async def traceroute(
@@ -86,31 +77,14 @@ async def traceroute(
     current_user: User = Depends(get_current_user)
 ):
     """Run traceroute on a target host"""
-    try:
-        # Execute traceroute command
-        result = run_traceroute(request.host, request.max_hops)
-        
-        # Save to database
-        job, _ = save_probe_result(
-            db=db, 
-            user_id=current_user.id, 
-            probe_type="traceroute", 
-            target=request.host,
-            result=result
-        )
-        
-        return format_response(
-            success=True,
-            probe_type="traceroute",
-            target=request.host,
-            result=result,
-            job_id=job.id
-        )
-    except subprocess.SubprocessError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error executing traceroute: {str(e)}"
-        )
+    result = run_traceroute(request.host, request.max_hops)
+    success = not result.startswith("ERROR")
+    
+    # Save to database
+    job_id = save_probe_result(db, current_user.id, "traceroute", request.host, result)
+    
+    # Return response
+    return format_response(success, "traceroute", request.host, result, job_id)
 
 @router.post("/dns", response_model=ProbeResponse)
 async def dns_lookup(
@@ -119,31 +93,26 @@ async def dns_lookup(
     current_user: User = Depends(get_current_user)
 ):
     """Run DNS lookup on a domain"""
-    try:
-        # Execute DNS lookup command
-        result = run_dns_lookup(request.domain, request.record_type)
-        
-        # Save to database
-        job, _ = save_probe_result(
-            db=db, 
-            user_id=current_user.id, 
-            probe_type="dns", 
-            target=f"{request.domain} ({request.record_type})",
-            result=result
-        )
-        
-        return format_response(
-            success=True,
-            probe_type="dns",
-            target=f"{request.domain} ({request.record_type})",
-            result=result,
-            job_id=job.id
-        )
-    except subprocess.SubprocessError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error executing DNS lookup: {str(e)}"
-        )
+    result = run_dns_lookup(request.domain, request.record_type)
+    success = not result.startswith("ERROR")
+    
+    # Save to database
+    job_id = save_probe_result(
+        db, 
+        current_user.id, 
+        f"dns-{request.record_type}", 
+        request.domain, 
+        result
+    )
+    
+    # Return response
+    return format_response(
+        success, 
+        f"dns-{request.record_type}", 
+        request.domain, 
+        result, 
+        job_id
+    )
 
 @router.post("/whois", response_model=ProbeResponse)
 async def whois(
@@ -152,31 +121,14 @@ async def whois(
     current_user: User = Depends(get_current_user)
 ):
     """Run WHOIS lookup on a domain"""
-    try:
-        # Execute WHOIS lookup command
-        result = run_whois(request.domain)
-        
-        # Save to database
-        job, _ = save_probe_result(
-            db=db, 
-            user_id=current_user.id, 
-            probe_type="whois", 
-            target=request.domain,
-            result=result
-        )
-        
-        return format_response(
-            success=True,
-            probe_type="whois",
-            target=request.domain,
-            result=result,
-            job_id=job.id
-        )
-    except subprocess.SubprocessError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error executing WHOIS lookup: {str(e)}"
-        )
+    result = run_whois(request.domain)
+    success = not result.startswith("ERROR")
+    
+    # Save to database
+    job_id = save_probe_result(db, current_user.id, "whois", request.domain, result)
+    
+    # Return response
+    return format_response(success, "whois", request.domain, result, job_id)
 
 @router.post("/curl", response_model=ProbeResponse)
 async def curl(
@@ -185,37 +137,32 @@ async def curl(
     current_user: User = Depends(get_current_user)
 ):
     """Run curl on a URL"""
-    try:
-        # Execute curl command
-        result = run_curl(
-            request.url, 
-            request.method, 
-            request.headers, 
-            request.data, 
-            request.timeout
-        )
-        
-        # Save to database
-        job, _ = save_probe_result(
-            db=db, 
-            user_id=current_user.id, 
-            probe_type="curl", 
-            target=request.url,
-            result=result
-        )
-        
-        return format_response(
-            success=True,
-            probe_type="curl",
-            target=request.url,
-            result=result,
-            job_id=job.id
-        )
-    except subprocess.SubprocessError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error executing curl: {str(e)}"
-        )
+    result = run_curl(
+        request.url, 
+        request.method, 
+        request.headers, 
+        request.data, 
+        request.timeout
+    )
+    success = not result.startswith("ERROR")
+    
+    # Save to database
+    job_id = save_probe_result(
+        db, 
+        current_user.id, 
+        f"curl-{request.method}", 
+        request.url, 
+        result
+    )
+    
+    # Return response
+    return format_response(
+        success, 
+        f"curl-{request.method}", 
+        request.url, 
+        result, 
+        job_id
+    )
 
 @router.post("/port", response_model=ProbeResponse)
 async def port_check(
@@ -224,31 +171,26 @@ async def port_check(
     current_user: User = Depends(get_current_user)
 ):
     """Check if a port is open on a host"""
-    try:
-        # Execute port check
-        result = run_port_check(request.host, request.port, request.timeout)
-        
-        # Save to database
-        job, _ = save_probe_result(
-            db=db, 
-            user_id=current_user.id, 
-            probe_type="port", 
-            target=f"{request.host}:{request.port}",
-            result=result
-        )
-        
-        return format_response(
-            success=True,
-            probe_type="port",
-            target=f"{request.host}:{request.port}",
-            result=result,
-            job_id=job.id
-        )
-    except subprocess.SubprocessError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error executing port check: {str(e)}"
-        )
+    result = run_port_check(request.host, request.port, request.timeout)
+    success = not result.startswith("Error")
+    
+    # Save to database
+    job_id = save_probe_result(
+        db, 
+        current_user.id, 
+        "port", 
+        f"{request.host}:{request.port}", 
+        result
+    )
+    
+    # Return response
+    return format_response(
+        success, 
+        "port", 
+        f"{request.host}:{request.port}", 
+        result, 
+        job_id
+    )
 
 @router.get("/history", response_model=List[ProbeJobResponse])
 async def get_probe_history(
@@ -259,30 +201,35 @@ async def get_probe_history(
     current_user: User = Depends(get_current_user)
 ):
     """Get probe job history for the current user"""
-    # Base query for user's probe jobs
+    # Build the query
     query = db.query(ProbeJob).filter(ProbeJob.user_id == current_user.id)
     
-    # Apply probe_type filter if provided
+    # Filter by probe type if provided
     if probe_type:
-        query = query.filter(ProbeJob.probe_type == probe_type)
+        query = query.filter(ProbeJob.probe_type.ilike(f"%{probe_type}%"))
     
-    # Order by creation date (newest first) and apply pagination
-    jobs = query.order_by(ProbeJob.created_at.desc()).offset(offset).limit(limit).all()
+    # Order by creation date descending
+    query = query.order_by(desc(ProbeJob.created_at))
     
-    # Prepare response with job history
-    result = []
+    # Apply pagination
+    jobs = query.offset(offset).limit(limit).all()
+    
+    # Get the latest result for each job
+    job_responses = []
     for job in jobs:
-        # Get the result for this job
-        result_record = db.query(ProbeResult).filter(ProbeResult.job_id == job.id).first()
+        latest_result = db.query(ProbeResult)\
+            .filter(ProbeResult.job_id == job.id)\
+            .order_by(desc(ProbeResult.created_at))\
+            .first()
         
-        result.append(
-            ProbeJobResponse(
-                id=job.id,
-                probe_type=job.probe_type,
-                target=job.target,
-                created_at=job.created_at,
-                result=result_record.result if result_record else None
-            )
-        )
+        job_dict = {
+            "id": job.id,
+            "probe_type": job.probe_type,
+            "target": job.target,
+            "created_at": job.created_at,
+            "result": latest_result.result if latest_result else None
+        }
+        
+        job_responses.append(job_dict)
     
-    return result
+    return job_responses

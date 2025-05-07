@@ -1,9 +1,9 @@
+from typing import Dict, Optional, Any
 from datetime import datetime
-from typing import Dict, List, Optional
-from pydantic import BaseModel, Field, HttpUrl, validator
+from pydantic import BaseModel, Field, validator
 import re
+import ipaddress
 
-# Input schemas
 class PingRequest(BaseModel):
     host: str = Field(..., description="Target hostname or IP address")
     count: int = Field(4, ge=1, le=20, description="Number of packets to send")
@@ -11,9 +11,11 @@ class PingRequest(BaseModel):
     @validator('host')
     def validate_hostname(cls, v):
         """Validate hostname or IP address"""
-        # Simple validation to prevent command injection
-        if not re.match(r'^[a-zA-Z0-9.\-_]+$', v):
-            raise ValueError('Invalid hostname or IP address format')
+        if not re.match(r'^[a-zA-Z0-9][-a-zA-Z0-9\.]{1,253}[a-zA-Z0-9]$', v):
+            try:
+                ipaddress.ip_address(v)
+            except ValueError:
+                raise ValueError("Invalid hostname or IP address")
         return v
 
 class TracerouteRequest(BaseModel):
@@ -23,8 +25,11 @@ class TracerouteRequest(BaseModel):
     @validator('host')
     def validate_hostname(cls, v):
         """Validate hostname or IP address"""
-        if not re.match(r'^[a-zA-Z0-9.\-_]+$', v):
-            raise ValueError('Invalid hostname or IP address format')
+        if not re.match(r'^[a-zA-Z0-9][-a-zA-Z0-9\.]{1,253}[a-zA-Z0-9]$', v):
+            try:
+                ipaddress.ip_address(v)
+            except ValueError:
+                raise ValueError("Invalid hostname or IP address")
         return v
 
 class DnsRequest(BaseModel):
@@ -34,16 +39,16 @@ class DnsRequest(BaseModel):
     @validator('domain')
     def validate_domain(cls, v):
         """Validate domain name"""
-        if not re.match(r'^[a-zA-Z0-9.\-_]+$', v):
-            raise ValueError('Invalid domain name format')
+        if not re.match(r'^[a-zA-Z0-9][-a-zA-Z0-9\.]{1,253}[a-zA-Z0-9]$', v):
+            raise ValueError("Invalid domain name")
         return v
     
     @validator('record_type')
     def validate_record_type(cls, v):
         """Validate DNS record type"""
-        valid_types = ['A', 'AAAA', 'MX', 'TXT', 'CNAME', 'NS', 'SOA', 'SRV', 'PTR']
+        valid_types = ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SRV", "TXT"]
         if v.upper() not in valid_types:
-            raise ValueError(f'Invalid record type. Must be one of {", ".join(valid_types)}')
+            raise ValueError(f"Invalid DNS record type. Must be one of: {', '.join(valid_types)}")
         return v.upper()
 
 class WhoisRequest(BaseModel):
@@ -52,8 +57,8 @@ class WhoisRequest(BaseModel):
     @validator('domain')
     def validate_domain(cls, v):
         """Validate domain name"""
-        if not re.match(r'^[a-zA-Z0-9.\-_]+$', v):
-            raise ValueError('Invalid domain name format')
+        if not re.match(r'^[a-zA-Z0-9][-a-zA-Z0-9\.]{1,253}[a-zA-Z0-9]$', v):
+            raise ValueError("Invalid domain name")
         return v
 
 class CurlRequest(BaseModel):
@@ -66,17 +71,16 @@ class CurlRequest(BaseModel):
     @validator('method')
     def validate_method(cls, v):
         """Validate HTTP method"""
-        valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS', 'PATCH']
+        valid_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
         if v.upper() not in valid_methods:
-            raise ValueError(f'Invalid HTTP method. Must be one of {", ".join(valid_methods)}')
+            raise ValueError(f"Invalid HTTP method. Must be one of: {', '.join(valid_methods)}")
         return v.upper()
     
     @validator('url')
     def validate_url(cls, v):
         """Validate URL"""
-        # Basic URL validation to prevent command injection
-        if not v.startswith(('http://', 'https://')):
-            raise ValueError('URL must start with http:// or https://')
+        if not re.match(r'^https?://[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$', v):
+            raise ValueError("Invalid URL format")
         return v
 
 class PortCheckRequest(BaseModel):
@@ -87,11 +91,13 @@ class PortCheckRequest(BaseModel):
     @validator('host')
     def validate_hostname(cls, v):
         """Validate hostname or IP address"""
-        if not re.match(r'^[a-zA-Z0-9.\-_]+$', v):
-            raise ValueError('Invalid hostname or IP address format')
+        if not re.match(r'^[a-zA-Z0-9][-a-zA-Z0-9\.]{1,253}[a-zA-Z0-9]$', v):
+            try:
+                ipaddress.ip_address(v)
+            except ValueError:
+                raise ValueError("Invalid hostname or IP address")
         return v
 
-# Output schemas
 class ProbeResponse(BaseModel):
     success: bool
     probe_type: str
@@ -108,4 +114,4 @@ class ProbeJobResponse(BaseModel):
     result: Optional[str]
     
     class Config:
-        orm_mode = True
+        from_attributes = True  # This replaces orm_mode=True in Pydantic v2

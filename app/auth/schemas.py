@@ -1,4 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional
+from datetime import datetime
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -10,13 +12,14 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: int
     is_active: bool
-    
+    created_at: datetime
+
     class Config:
-        orm_mode = True
+        from_attributes = True  # This replaces orm_mode=True in Pydantic v2
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 class TokenData(BaseModel):
-    username: str | None = None
+    username: Optional[str] = None

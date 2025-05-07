@@ -1,5 +1,5 @@
+from typing import Dict, Any
 from datetime import datetime
-from typing import Any, Dict
 
 def format_response(
     success: bool, 
@@ -17,5 +17,5 @@ def format_response(
         "target": target,
         "result": result,
         "job_id": job_id,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow().isoformat()
     }
