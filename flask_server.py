@@ -191,13 +191,38 @@ def get_current_user():
             except Exception as e:
                 logger.warning(f"JWT validation error: {str(e)}")
         
-        # If no valid JWT, check for API key
+        # If no valid JWT, check for API key in different formats
         if not g.current_user:
-            api_key = request.headers.get('X-API-Key')
+            # Check multiple possible header formats for API key
+            api_key = None
+            
+            # Common API key header formats
+            api_key_headers = [
+                'X-API-Key', 'x-api-key', 'X-Api-Key', 'Api-Key',
+                'apikey', 'api-key', 'api_key'
+            ]
+            
+            # Check all potential headers
+            for header in api_key_headers:
+                if header in request.headers:
+                    api_key = request.headers.get(header)
+                    break
+                    
+            # Also check Authorization header with ApiKey prefix
+            if not api_key and auth_header and auth_header.startswith('ApiKey '):
+                api_key = auth_header.split(' ')[1]
+                
+            # Debug logging - log received headers for troubleshooting
+            logger.debug(f"Headers received: {dict(request.headers)}")
+            
             if api_key:
+                logger.debug(f"Found API key, attempting to verify")
                 user = verify_api_key(api_key)
                 if user:
+                    logger.debug(f"API key verified for user: {user.username}")
                     g.current_user = user
+                else:
+                    logger.debug(f"API key verification failed")
             
     return g.current_user
 
@@ -1003,6 +1028,13 @@ def whois_probe():
 def probe_history():
     """Get probe job history for the current user"""
     current_user = get_current_user()
+    
+    # Log authentication details for debugging
+    auth_header = request.headers.get('Authorization', 'None')
+    api_key_header = request.headers.get('X-API-Key', 'None')
+    logger.debug(f"Probe history request received. Auth header: {auth_header[:10]}... API key header: {api_key_header[:5]}...")
+    logger.debug(f"Current user: {current_user.username if current_user else 'None'}")
+    
     probe_type = request.args.get("probe_type")
     limit = int(request.args.get("limit", 20))
     offset = int(request.args.get("offset", 0))
@@ -1014,6 +1046,9 @@ def probe_history():
     
     total = query.count()
     jobs = query.order_by(ProbeJob.created_at.desc()).limit(limit).offset(offset).all()
+    
+    # Log successful retrieval
+    logger.debug(f"Retrieved {len(jobs)} probe jobs for user {current_user.username}")
     
     return jsonify({
         "total": total,
