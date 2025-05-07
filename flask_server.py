@@ -84,7 +84,8 @@ class User(db.Model):
     @password.setter
     def password(self, password):
         """Set password hash"""
-        self.hashed_password = generate_password_hash(password, method='sha256')
+        # Use default method which produces shorter hashes
+        self.hashed_password = generate_password_hash(password)
     
     def verify_password(self, password):
         """Check if password matches"""
@@ -204,7 +205,7 @@ def get_current_user():
 def create_jwt_token(user):
     """Create a new JWT token for the user"""
     payload = {
-        "sub": user.id,
+        "sub": str(user.id),  # Convert ID to string for JWT
         "username": user.username,
         "exp": datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION),
         "iat": datetime.utcnow()
@@ -222,7 +223,8 @@ def verify_jwt_token(token):
         if "exp" in payload and time.time() > payload["exp"]:
             return None
         
-        user = User.query.filter_by(id=user_id, is_active=True).first()
+        # Convert string ID back to integer
+        user = User.query.filter_by(id=int(user_id), is_active=True).first()
         return user
     except (jwt.PyJWTError, Exception) as e:
         logger.error(f"Error verifying JWT token: {str(e)}")
