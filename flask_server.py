@@ -16,6 +16,8 @@ import jwt
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from passlib.hash import bcrypt_sha256
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -31,6 +33,25 @@ app = Flask(__name__)
 
 # Configure CORS
 CORS(app)
+
+# Define a custom rate limit key function that uses user identity when available
+def get_rate_limit_key():
+    # First try to get the current user
+    current_user = get_current_user()
+    if current_user:
+        # Use user ID as the key
+        return str(current_user.id)
+    
+    # Fall back to IP address
+    return get_remote_address()
+
+# Configure rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_rate_limit_key,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 # Configure application
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "probeops_development_secret")
@@ -910,6 +931,7 @@ def create_apikey():
 # Probe routes
 @app.route('/probes/ping', methods=["GET", "POST"])
 @login_required
+@limiter.limit("30 per minute")
 def ping_probe():
     """Run ping on a target host"""
     if request.method == "POST":
