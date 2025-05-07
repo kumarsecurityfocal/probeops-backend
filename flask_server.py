@@ -59,10 +59,18 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    hashed_password = db.Column(db.String(256), nullable=False) # Changed to match DB structure
     is_active = db.Column(db.Boolean, default=True)
-    is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Virtual property for admin checks (not in database)
+    @property
+    def is_admin(self):
+        """
+        Check if user is admin based on username
+        Since there's no is_admin column, we'll consider users with username 'admin' as admins
+        """
+        return self.username == 'admin'
     
     # Relationships
     api_keys = db.relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
@@ -76,11 +84,11 @@ class User(db.Model):
     @password.setter
     def password(self, password):
         """Set password hash"""
-        self.password_hash = generate_password_hash(password)
+        self.hashed_password = generate_password_hash(password, method='sha256')
     
     def verify_password(self, password):
         """Check if password matches"""
-        return check_password_hash(self.password_hash, password)
+        return check_password_hash(self.hashed_password, password)
     
     def to_dict(self):
         """Convert to dictionary for API responses"""
@@ -90,7 +98,7 @@ class User(db.Model):
             'email': self.email,
             'is_active': self.is_active,
             'is_admin': self.is_admin,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'api_key_count': len(self.api_keys)
         }
     
@@ -645,8 +653,7 @@ def setup_database():
             admin = User(
                 username="admin",
                 email="admin@probeops.com",
-                is_active=True,
-                is_admin=True
+                is_active=True
             )
             admin.password = "administrator"  # This will be hashed
             db.session.add(admin)
@@ -734,8 +741,7 @@ def register():
         user = User(
             username=data["username"],
             email=data["email"],
-            is_active=True,
-            is_admin=False
+            is_active=True
         )
         user.password = data["password"]  # This will be hashed
         
