@@ -1069,27 +1069,122 @@ def probe_history():
     # Log for debugging
     logger.debug(f"Processing history request for user: {current_user.username}")
     
-    # Continue with the endpoint logic
+    # Extract pagination and filtering parameters
     probe_type = request.args.get("probe_type")
-    limit = int(request.args.get("limit", 20))
-    offset = int(request.args.get("offset", 0))
+    target = request.args.get("target")
+    success = request.args.get("success")
     
+    # Parse limit with error handling
+    try:
+        limit = int(request.args.get("limit", 20))
+        limit = min(limit, 100)  # Cap at 100 records
+    except (ValueError, TypeError):
+        limit = 20
+    
+    # Parse offset with error handling
+    try:
+        offset = int(request.args.get("offset", 0))
+        if offset < 0:
+            offset = 0
+    except (ValueError, TypeError):
+        offset = 0
+    
+    sort_by = request.args.get("sort", "created_at")  # Default sort by creation time
+    sort_dir = request.args.get("dir", "desc")  # Default direction descending (newest first)
+    
+    # Start building the query
     query = ProbeJob.query.filter_by(user_id=current_user.id)
     
+    # Apply filters
     if probe_type:
         query = query.filter_by(probe_type=probe_type)
     
+    if target:
+        query = query.filter(ProbeJob.target.ilike(f"%{target}%"))
+    
+    if success is not None:
+        try:
+            # Handle different valid inputs for success filter
+            if success.lower() in ('true', '1', 'yes'):
+                query = query.filter_by(success=True)
+            elif success.lower() in ('false', '0', 'no'):
+                query = query.filter_by(success=False)
+            # If invalid value, ignore this filter
+        except (AttributeError, ValueError):
+            # If success param is not a valid string, ignore it
+            pass
+    
+    # Validate and apply sorting
+    valid_sort_fields = ['id', 'created_at', 'probe_type', 'target', 'success']
+    if sort_by not in valid_sort_fields:
+        sort_by = 'created_at'
+    
+    sort_column = getattr(ProbeJob, sort_by)
+    if sort_dir.lower() == 'asc':
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+    
+    # Get total count for pagination info
     total = query.count()
-    jobs = query.order_by(ProbeJob.created_at.desc()).limit(limit).offset(offset).all()
+    
+    # Apply pagination
+    jobs = query.limit(limit).offset(offset).all()
     
     # Log successful retrieval
     logger.debug(f"Retrieved {len(jobs)} probe jobs for user {current_user.username}")
     
-    return jsonify({
+    # Build pagination URLs for navigation
+    base_url = request.base_url
+    query_params = dict(request.args)
+    
+    # Function to build paginated URLs with URL encoding for safety
+    def build_url(new_offset):
+        from urllib.parse import urlencode
+        params = query_params.copy()
+        params['offset'] = new_offset
+        params['limit'] = limit
+        # Properly encode URL parameters
+        return f"{base_url}?{urlencode(params)}"
+    
+    # Calculate pagination links
+    next_offset = offset + limit if offset + limit < total else None
+    prev_offset = offset - limit if offset > 0 else None
+    
+    # Prepare pagination info
+    pagination = {
         "total": total,
         "offset": offset,
         "limit": limit,
-        "jobs": [job.to_dict() for job in jobs]
+        "pages": (total + limit - 1) // limit,  # Ceiling division
+        "current_page": (offset // limit) + 1,
+    }
+    
+    # Add navigation links if applicable
+    links = {}
+    if next_offset is not None:
+        links["next"] = build_url(next_offset)
+    if prev_offset is not None:
+        links["prev"] = build_url(prev_offset)
+    if offset > 0:
+        links["first"] = build_url(0)
+    if offset + limit < total:
+        last_offset = ((total - 1) // limit) * limit
+        links["last"] = build_url(last_offset)
+    
+    return jsonify({
+        "pagination": pagination,
+        "links": links,
+        "jobs": [job.to_dict() for job in jobs],
+        "filters": {
+            "probe_type": probe_type,
+            "target": target,
+            "success": success
+        },
+        "sorting": {
+            "field": sort_by,
+            "direction": sort_dir
+        }
     })
 
 
@@ -1115,30 +1210,54 @@ def server_error(error):
 
 # Admin routes for server management
 @app.route('/admin/server_status')
+@admin_required
+@limiter.limit("10 per minute")
 def server_status():
-    """Admin endpoint to check the server status"""
+    """Admin endpoint to check the server status (admin only)"""
     from subprocess import run, PIPE
+    import subprocess
     
     def run_command(cmd):
-        result = run(cmd, shell=True, stdout=PIPE, stderr=PIPE, text=True)
-        return result.stdout
+        try:
+            result = run(cmd, shell=True, stdout=PIPE, stderr=PIPE, text=True, timeout=5)
+            return result.stdout
+        except subprocess.TimeoutExpired:
+            return "Command timed out after 5 seconds"
+        except Exception as e:
+            logger.error(f"Error running command '{cmd}': {str(e)}")
+            return f"Error: {str(e)}"
     
-    memory_info = run_command("free -h")
-    disk_info = run_command("df -h")
-    process_info = run_command("ps aux | grep python")
-    database_info = {
-        "users": User.query.count(),
-        "api_keys": ApiKey.query.count(),
-        "probe_jobs": ProbeJob.query.count()
-    }
-    
-    return jsonify({
-        "status": "running",
-        "memory": memory_info,
-        "disk": disk_info,
-        "processes": process_info,
-        "database": database_info
-    })
+    try:
+        memory_info = run_command("free -h")
+        disk_info = run_command("df -h")
+        process_info = run_command("ps aux | grep python")
+        
+        # Get database stats with proper error handling
+        try:
+            db_counts = {
+                "users": User.query.count(),
+                "api_keys": ApiKey.query.count(),
+                "probe_jobs": ProbeJob.query.count()
+            }
+        except Exception as e:
+            logger.error(f"Database error in status endpoint: {str(e)}")
+            db_counts = {"error": str(e)}
+        
+        return jsonify({
+            "status": "running",
+            "timestamp": datetime.utcnow().isoformat(),
+            "memory": memory_info,
+            "disk": disk_info,
+            "processes": process_info,
+            "database": db_counts
+        })
+    except Exception as e:
+        logger.exception(f"Error in server status endpoint: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }), 500
 
 
 # Required for gunicorn
