@@ -773,6 +773,7 @@ def health_check():
 
 # User routes
 @app.route('/users/register', methods=["POST"])
+@limiter.limit("5 per minute")
 def register():
     """Register a new user"""
     data = request.json
@@ -824,6 +825,7 @@ def register():
 
 
 @app.route('/users/login', methods=["POST"])
+@limiter.limit("10 per minute")
 def login():
     """Login and get JWT token"""
     data = request.json
@@ -875,6 +877,7 @@ def list_users():
 # API Key routes
 @app.route('/apikeys', methods=["GET"])
 @login_required
+@limiter.limit("20 per minute")
 def list_apikeys():
     """List API keys for the current user"""
     current_user = get_current_user()
@@ -901,6 +904,7 @@ def list_apikeys():
 
 @app.route('/apikeys', methods=["POST"])
 @login_required
+@limiter.limit("5 per minute")
 def create_apikey():
     """Create a new API key for the current user"""
     current_user = get_current_user()
@@ -963,6 +967,7 @@ def ping_probe():
 
 @app.route('/probes/traceroute', methods=["GET", "POST"])
 @login_required
+@limiter.limit("15 per minute")
 def traceroute_probe():
     """Run traceroute on a target host"""
     if request.method == "POST":
@@ -994,6 +999,7 @@ def traceroute_probe():
 
 @app.route('/probes/dns', methods=["GET", "POST"])
 @login_required
+@limiter.limit("30 per minute")
 def dns_probe():
     """Run DNS lookup on a domain"""
     if request.method == "POST":
@@ -1025,6 +1031,7 @@ def dns_probe():
 
 @app.route('/probes/whois', methods=["GET", "POST"])
 @login_required
+@limiter.limit("10 per minute")
 def whois_probe():
     """Run WHOIS lookup on a domain"""
     if request.method == "POST":
@@ -1054,6 +1061,7 @@ def whois_probe():
 
 @app.route('/probes/history', methods=["GET"])
 @login_required
+@limiter.limit("60 per minute")
 def probe_history():
     """Get probe job history for the current user"""
     current_user = get_current_user()
