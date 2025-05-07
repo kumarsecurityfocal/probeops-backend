@@ -196,17 +196,24 @@ def get_current_user():
             # Check multiple possible header formats for API key
             api_key = None
             
-            # Common API key header formats
+            # Common API key header formats (for reference only)
             api_key_headers = [
                 'X-API-Key', 'x-api-key', 'X-Api-Key', 'Api-Key',
                 'apikey', 'api-key', 'api_key'
             ]
             
-            # Check all potential headers
-            for header in api_key_headers:
-                if header in request.headers:
-                    api_key = request.headers.get(header)
-                    break
+            # Convert headers to lowercase for case-insensitive comparison
+            headers_lowercase = {k.lower(): v for k, v in request.headers.items()}
+            
+            # Check for common API key header patterns (lowercase)
+            if 'x-api-key' in headers_lowercase:
+                api_key = headers_lowercase['x-api-key']
+            elif 'api-key' in headers_lowercase:
+                api_key = headers_lowercase['api-key']
+            elif 'apikey' in headers_lowercase:
+                api_key = headers_lowercase['apikey']
+            elif 'api_key' in headers_lowercase:
+                api_key = headers_lowercase['api_key']
                     
             # Also check Authorization header with ApiKey prefix
             if not api_key and auth_header and auth_header.startswith('ApiKey '):
