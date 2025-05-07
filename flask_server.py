@@ -1031,57 +1031,20 @@ def whois_probe():
 
 
 @app.route('/probes/history', methods=["GET"])
+@login_required
 def probe_history():
     """Get probe job history for the current user"""
-    # First, print the raw headers for debugging
-    all_headers = dict(request.headers)
-    logger.debug(f"All request headers: {all_headers}")
+    current_user = get_current_user()
     
-    # Manual API key check for this endpoint
-    api_key = None
-    api_key_header = None
-    
-    # Check for the API key in various header formats
-    api_key_headers = ['X-API-Key', 'x-api-key', 'X-Api-Key', 'Api-Key', 'apikey', 'api_key']
-    for header in api_key_headers:
-        if header in request.headers:
-            api_key = request.headers.get(header)
-            api_key_header = header
-            logger.debug(f"Found API key in header: {header}")
-            break
-    
-    # Check if API key authentication is valid
-    authenticated_user = None
-    if api_key:
-        logger.debug(f"Verifying API key: {api_key[:10]}...")
-        authenticated_user = verify_api_key(api_key)
-        if authenticated_user:
-            logger.debug(f"API key auth successful for user: {authenticated_user.username}")
-    
-    # If no valid API key, try JWT
-    if not authenticated_user:
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            logger.debug(f"Trying JWT token auth")
-            authenticated_user = verify_jwt_token(token)
-            if authenticated_user:
-                logger.debug(f"JWT auth successful for user: {authenticated_user.username}")
-    
-    # If still not authenticated, return error
-    if not authenticated_user:
-        logger.debug("Authentication failed for all methods")
-        return jsonify({
-            "error": "Authentication required",
-            "message": "Please provide a valid JWT token or API key."
-        }), 401
+    # Log for debugging
+    logger.debug(f"Processing history request for user: {current_user.username}")
     
     # Continue with the endpoint logic
     probe_type = request.args.get("probe_type")
     limit = int(request.args.get("limit", 20))
     offset = int(request.args.get("offset", 0))
     
-    query = ProbeJob.query.filter_by(user_id=authenticated_user.id)
+    query = ProbeJob.query.filter_by(user_id=current_user.id)
     
     if probe_type:
         query = query.filter_by(probe_type=probe_type)
@@ -1090,7 +1053,7 @@ def probe_history():
     jobs = query.order_by(ProbeJob.created_at.desc()).limit(limit).offset(offset).all()
     
     # Log successful retrieval
-    logger.debug(f"Retrieved {len(jobs)} probe jobs for user {authenticated_user.username}")
+    logger.debug(f"Retrieved {len(jobs)} probe jobs for user {current_user.username}")
     
     return jsonify({
         "total": total,
