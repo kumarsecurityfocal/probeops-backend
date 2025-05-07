@@ -1,1 +1,1 @@
-# Probes module initialization
+# Package initialization

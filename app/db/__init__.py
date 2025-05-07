@@ -1,1 +1,1 @@
-# Database module initialization
+# Database package initialization

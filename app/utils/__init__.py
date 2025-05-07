@@ -1,1 +1,1 @@
-# Utils module initialization
+# Package initialization

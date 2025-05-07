@@ -1,20 +1,22 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
-from app.config.settings import get_database_url
+# Database URL
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./test.db")
 
-# Get database URL from environment or fallback to default
-DATABASE_URL = get_database_url()
+# Create engine
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=300
+)
 
-# Create database engine
-engine = create_engine(DATABASE_URL)
-
-# Create sessionmaker
+# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create Base class for models
+# Create base class for models
 Base = declarative_base()
 
 def get_db():
@@ -27,4 +29,7 @@ def get_db():
 
 def create_tables():
     """Create all tables in the database"""
+    # Import models to ensure they're included in metadata
+    from app.db.models import User, ProbeJob, ProbeResult
+    
     Base.metadata.create_all(bind=engine)
