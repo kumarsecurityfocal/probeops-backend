@@ -1,5 +1,4 @@
 #!/bin/bash
-# Start script for running the FastAPI application using plain uvicorn
-# This avoids ASGI/WSGI compatibility issues
-
-exec uvicorn main:app --host 0.0.0.0 --port 5000 --reload
+# Start script for the FastAPI application using uvicorn directly
+echo "Starting FastAPI application with uvicorn..."
+exec uvicorn simple_app:app --host 0.0.0.0 --port 5000 --reload

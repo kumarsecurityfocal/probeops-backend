@@ -1,13 +1,25 @@
 """
-Main application entry point.
-Import FastAPI application from app module.
+Main application entry point for Flask.
+This is a simple Flask application that will be used with gunicorn.
 """
-from app import app
+from flask import Flask, jsonify
 
-# When this file is imported by gunicorn or uvicorn, they will use this app object
-# For direct execution with python, use the conditional below
+app = Flask(__name__)
 
-if __name__ == "__main__":
-    # For direct execution
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+@app.route('/')
+def root():
+    return jsonify({
+        "message": "Welcome to ProbeOps API", 
+        "status": "online",
+        "note": "This is a Flask wrapper. For the full FastAPI application, run: uvicorn simple_app:app --host 0.0.0.0 --port 5000"
+    })
+
+@app.route('/health')
+def health_check():
+    return jsonify({
+        "status": "OK",
+        "message": "Service is running"
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
