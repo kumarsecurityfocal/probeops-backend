@@ -18,7 +18,7 @@ fi
 
 # Determine database host from environment
 DB_HOST="${POSTGRES_HOST:-db}"
-DB_PORT="${DB_PORT:-5432}"
+DB_PORT="${POSTGRES_PORT:-5432}"
 MAX_RETRIES=30
 RETRY_INTERVAL=2
 
@@ -41,7 +41,7 @@ echo "PostgreSQL is ready!"
 # Load environment variables from .env if it exists and we're not in Docker
 if [ -f .env ] && [ -z "${DOCKER_ENV}" ]; then
     echo "Loading environment variables from .env file..."
-    export $(grep -v '^#' .env | xargs)
+    export $(grep -v '^#' .env | xargs -0)
 fi
 
 # Print configuration summary
@@ -50,15 +50,30 @@ echo "- API Port: ${API_PORT:-5000}"
 echo "- Database Host: ${DB_HOST}"
 echo "- Environment: ${ENVIRONMENT:-production}"
 echo "- Workers: ${WORKERS:-4}"
+echo "- Timeout: ${WORKER_TIMEOUT:-120}s"
+echo "- Keepalive: ${KEEPALIVE:-5}s"
 
 # Run database migrations or initialization
 echo "Setting up database tables..."
 python -c "from flask_server import app, db; app.app_context().push(); db.create_all()"
+echo "Database setup complete."
 
-# Determine number of workers based on environment or use 4 as default
-WORKERS=${WORKERS:-4}
+# Determine number of workers based on environment or CPU cores
+if [ -z "${WORKERS}" ]; then
+    # Calculate workers based on CPU cores if available
+    if command -v nproc > /dev/null; then
+        WORKERS=$(($(nproc) * 2 + 1))
+        echo "Auto-configuring workers based on CPU cores: ${WORKERS}"
+    else
+        WORKERS=4
+        echo "Using default worker count: ${WORKERS}"
+    fi
+fi
+
 WORKER_TIMEOUT=${WORKER_TIMEOUT:-120}
 KEEPALIVE=${KEEPALIVE:-5}
+MAX_REQUESTS=${MAX_REQUESTS:-1000}
+MAX_REQUESTS_JITTER=${MAX_REQUESTS_JITTER:-100}
 
 # Start the application
 echo "Starting ProbeOps API server with Flask WSGI..."
@@ -66,6 +81,10 @@ exec gunicorn --workers "${WORKERS}" \
     --bind "0.0.0.0:${API_PORT:-5000}" \
     --timeout "${WORKER_TIMEOUT}" \
     --keep-alive "${KEEPALIVE}" \
+    --max-requests "${MAX_REQUESTS}" \
+    --max-requests-jitter "${MAX_REQUESTS_JITTER}" \
+    --log-level "${LOG_LEVEL:-info}" \
     --access-logfile - \
     --error-logfile - \
+    --forwarded-allow-ips "*" \
     "main:app"
