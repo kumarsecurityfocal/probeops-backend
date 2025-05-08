@@ -4,8 +4,6 @@
 # This docker-compose file sets up the ProbeOps API with PostgreSQL
 # for local development and production deployment.
 
-version: '3.8'
-
 services:
   # ProbeOps API service
   api:

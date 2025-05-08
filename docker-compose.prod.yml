@@ -4,8 +4,6 @@
 # This docker-compose file is optimized for production deployment.
 # It disables volume mounts and exposes only necessary ports.
 
-version: '3.8'
-
 services:
   # ProbeOps API service
   api:
