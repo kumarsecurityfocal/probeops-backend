@@ -11,6 +11,7 @@ import secrets
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
+from pathlib import Path
 
 import jwt
 from flask import Flask, jsonify, request, g
@@ -21,9 +22,16 @@ from flask_limiter.util import get_remote_address
 from passlib.hash import bcrypt_sha256
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Configure logging
+# Load environment variables from .env file if present
+from dotenv import load_dotenv
+env_path = Path('.') / '.env'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+
+# Configure logging based on environment setting
+log_level = os.getenv('LOG_LEVEL', 'DEBUG').upper()
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=getattr(logging, log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -54,23 +62,30 @@ limiter = Limiter(
 )
 
 # Configure application
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "probeops_development_secret")
+app.config["SECRET_KEY"] = os.getenv("API_KEY_SECRET", "probeops_development_secret")
 
 # Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
+    "pool_timeout": 30,
+    "max_overflow": 10
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Debug mode based on environment
+app.config["DEBUG"] = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 
 # Initialize database
 db = SQLAlchemy(app)
 
 # JWT Configuration
-JWT_SECRET = os.environ.get("JWT_SECRET", "probeops_dev_secret_key")
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION = 24 * 60 * 60  # 24 hours in seconds
+JWT_SECRET = os.getenv("JWT_SECRET_KEY", "probeops_dev_secret_key")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+# Convert JWT expiration to seconds
+JWT_EXPIRATION_MINUTES = int(os.getenv("JWT_EXPIRATION_MINUTES", "60"))
+JWT_EXPIRATION = JWT_EXPIRATION_MINUTES * 60  # Convert minutes to seconds
 
 # Define models
 class User(db.Model):
