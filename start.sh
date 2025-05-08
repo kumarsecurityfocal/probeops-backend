@@ -62,11 +62,11 @@ KEEPALIVE=${KEEPALIVE:-5}
 
 # Start the application
 echo "Starting ProbeOps API server..."
-exec gunicorn --bind "0.0.0.0:${API_PORT:-5000}" \
-    --workers "${WORKERS}" \
+exec gunicorn --workers "${WORKERS}" \
+    --bind "0.0.0.0:${API_PORT:-5000}" \
     --worker-class uvicorn.workers.UvicornWorker \
     --timeout "${WORKER_TIMEOUT}" \
-    --keepalive "${KEEPALIVE}" \
+    --keep-alive "${KEEPALIVE}" \
     --access-logfile - \
     --error-logfile - \
     "main:app"
