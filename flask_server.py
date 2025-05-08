@@ -39,8 +39,20 @@ logger = logging.getLogger(__name__)
 # Create the Flask application
 app = Flask(__name__)
 
-# Configure CORS
-CORS(app)
+# Configure CORS to allow requests from any origin
+CORS(
+    app,
+    origins="*",
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Content-Type", "Authorization", "X-API-Key", "X-Requested-With",
+        "Accept", "Origin", "Access-Control-Request-Method", 
+        "Access-Control-Request-Headers", "ApiKey", "Api-Key"
+    ],
+    supports_credentials=True,
+    expose_headers=["Content-Type", "Authorization", "X-API-Key"],
+    max_age=3600
+)
 
 # Define a custom rate limit key function that uses user identity when available
 def get_rate_limit_key():
