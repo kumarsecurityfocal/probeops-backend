@@ -61,10 +61,9 @@ WORKER_TIMEOUT=${WORKER_TIMEOUT:-120}
 KEEPALIVE=${KEEPALIVE:-5}
 
 # Start the application
-echo "Starting ProbeOps API server..."
+echo "Starting ProbeOps API server with Flask WSGI..."
 exec gunicorn --workers "${WORKERS}" \
     --bind "0.0.0.0:${API_PORT:-5000}" \
-    --worker-class uvicorn.workers.UvicornWorker \
     --timeout "${WORKER_TIMEOUT}" \
     --keep-alive "${KEEPALIVE}" \
     --access-logfile - \
