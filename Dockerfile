@@ -22,10 +22,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY requirements.docker.txt requirements.txt
+COPY requirements.docker.txt /build/requirements.docker.txt
 
-# Install dependencies
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels -r requirements.txt
+# Generate wheel packages with all dependencies
+RUN pip wheel --wheel-dir=/wheels -r requirements.docker.txt
 
 # Stage 2: Runtime image
 FROM python:3.11-slim
@@ -46,10 +46,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements file for installation
+COPY requirements.docker.txt /app/requirements.docker.txt
+
 # Copy built wheels from builder stage
-COPY --from=builder /build/wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
-    && rm -rf /wheels
+COPY --from=builder /wheels /wheels
+
+# Install from pre-built wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.docker.txt && rm -rf /wheels
 
 # Copy application code
 COPY . /app/

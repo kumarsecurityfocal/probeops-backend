@@ -20,5 +20,12 @@ werkzeug>=2.2.3
 # Database dependencies
 psycopg2-binary>=2.9.6
 
+# Network modules
+dnspython>=2.3.0
+
 # API rate limiting
 email-validator>=2.0.0
+
+# Additional utilities
+idna>=3.4
+cffi>=1.15.1
