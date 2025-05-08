@@ -1,26 +1,72 @@
 #!/bin/bash
+# ProbeOps API - Docker Startup Script
+# This script handles initialization and startup of the ProbeOps API in a Docker container.
+
+# Exit on error
+set -e
+
+# Print commands for debugging
+if [ "${DEBUG}" = "True" ] || [ "${DEBUG}" = "true" ] || [ "${DEBUG}" = "1" ]; then
+    set -x
+fi
+
+# Install netcat if not available (needed for database connection check)
+if ! command -v nc > /dev/null; then
+    echo "Installing netcat for database connection check..."
+    apt-get update && apt-get install -y --no-install-recommends netcat-openbsd
+fi
+
+# Determine database host from environment
+DB_HOST="${POSTGRES_HOST:-db}"
+DB_PORT="${DB_PORT:-5432}"
+MAX_RETRIES=30
+RETRY_INTERVAL=2
 
 # Wait for the database to be ready
-echo "Waiting for PostgreSQL to be ready..."
-while ! nc -z db 5432; do
-  sleep 0.5
+echo "Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT} to be ready..."
+RETRIES=0
+until nc -z "${DB_HOST}" "${DB_PORT}" || [ ${RETRIES} -eq ${MAX_RETRIES} ]; do
+    echo "Waiting for PostgreSQL to be available... (${RETRIES}/${MAX_RETRIES})"
+    sleep ${RETRY_INTERVAL}
+    RETRIES=$((RETRIES+1))
 done
+
+if [ ${RETRIES} -eq ${MAX_RETRIES} ]; then
+    echo "Error: PostgreSQL did not become available in time"
+    exit 1
+fi
+
 echo "PostgreSQL is ready!"
 
-# Load environment variables from .env if it exists
-if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+# Load environment variables from .env if it exists and we're not in Docker
+if [ -f .env ] && [ -z "${DOCKER_ENV}" ]; then
+    echo "Loading environment variables from .env file..."
+    export $(grep -v '^#' .env | xargs)
 fi
+
+# Print configuration summary
+echo "ProbeOps API Configuration:"
+echo "- API Port: ${API_PORT:-5000}"
+echo "- Database Host: ${DB_HOST}"
+echo "- Environment: ${ENVIRONMENT:-production}"
+echo "- Workers: ${WORKERS:-4}"
 
 # Run database migrations or initialization
 echo "Setting up database tables..."
 python -c "from flask_server import app, db; app.app_context().push(); db.create_all()"
 
+# Determine number of workers based on environment or use 4 as default
+WORKERS=${WORKERS:-4}
+WORKER_TIMEOUT=${WORKER_TIMEOUT:-120}
+KEEPALIVE=${KEEPALIVE:-5}
+
 # Start the application
 echo "Starting ProbeOps API server..."
-exec gunicorn --bind 0.0.0.0:5000 \
-    --workers 4 \
+exec gunicorn --bind "0.0.0.0:${API_PORT:-5000}" \
+    --workers "${WORKERS}" \
     --worker-class uvicorn.workers.UvicornWorker \
+    --timeout "${WORKER_TIMEOUT}" \
+    --keepalive "${KEEPALIVE}" \
     --access-logfile - \
     --error-logfile - \
     "main:app"

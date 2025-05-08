@@ -1,8 +1,8 @@
 # ===========================================
-# ProbeOps API - Docker Compose Configuration
+# ProbeOps API - Production Docker Compose Configuration
 # ===========================================
-# This docker-compose file sets up the ProbeOps API with PostgreSQL
-# for local development and production deployment.
+# This docker-compose file is optimized for production deployment.
+# It disables volume mounts and exposes only necessary ports.
 
 version: '3.8'
 
@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - ENVIRONMENT=${ENVIRONMENT:-production}
+        - ENVIRONMENT=production
     image: probeops-api:${TAG:-latest}
     container_name: probeops-api
     restart: unless-stopped
@@ -23,10 +23,11 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.prod
     environment:
       - DOCKER_ENV=1
       - POSTGRES_HOST=db
+      - ENVIRONMENT=production
     networks:
       - probeops-network
     healthcheck:
@@ -38,19 +39,17 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 1G
+          cpus: '2'
+          memory: 2G
         reservations:
-          cpus: '0.25'
-          memory: 512M
+          cpus: '0.5'
+          memory: 1G
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
-    # For development only - comment out in production
-    volumes:
-      - ./:/app
+        max-size: "20m"
+        max-file: "5"
+    # No volume mounts in production - use the containerized code
 
   # PostgreSQL database service
   db:
@@ -59,15 +58,11 @@ services:
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-      # Optional: Add initialization scripts if needed
-      # - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     env_file:
-      - .env
+      - .env.prod
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
-    ports:
-      # Comment out in production to prevent external connections
-      - "${DB_PORT:-5432}:5432"
+    # No external port exposure in production for security
     networks:
       - probeops-network
     healthcheck:
@@ -79,13 +74,15 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
+          cpus: '2'
+          memory: 2G
+        reservations:
           memory: 1G
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "20m"
+        max-file: "5"
 
 # Volumes for persistent data
 volumes:
