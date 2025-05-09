@@ -1228,6 +1228,16 @@ def not_found(error):
     }), 404
 
 
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle 400 errors including JSON decode errors"""
+    logger.error(f"Bad request error: {str(error)}")
+    return jsonify({
+        "error": "Bad request",
+        "message": "The request could not be processed. Please check your JSON format."
+    }), 400
+
+
 @app.errorhandler(500)
 def server_error(error):
     """Handle 500 errors"""
@@ -1236,6 +1246,27 @@ def server_error(error):
         "error": "Server error",
         "message": "An internal server error occurred."
     }), 500
+
+
+# Handle JSON decode errors from Flask
+@app.before_request
+def handle_json_error():
+    """Validate JSON for POST/PUT requests that contain JSON data"""
+    if (request.method in ['POST', 'PUT'] and 
+        request.content_type and 
+        'application/json' in request.content_type):
+        
+        try:
+            # Force JSON parsing if it hasn't already been parsed
+            if not request.is_json:
+                # This will raise an exception if the JSON is invalid
+                _ = request.get_json(force=True)
+        except Exception as e:
+            logger.error(f"JSON parsing error: {str(e)}")
+            return jsonify({
+                "error": "Invalid JSON",
+                "message": "The request body contains invalid JSON."
+            }), 400
 
 
 # Admin routes for server management
