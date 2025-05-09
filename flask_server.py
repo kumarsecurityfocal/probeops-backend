@@ -39,8 +39,14 @@ logger = logging.getLogger(__name__)
 # Create the Flask application
 app = Flask(__name__)
 
-# Configure CORS to allow requests from specified origins or all origins as fallback
-cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else "*"
+# Configure CORS to allow requests from specified origins or use defaults
+cors_origins_env = os.getenv("CORS_ORIGINS", "")
+if cors_origins_env:
+    cors_origins = cors_origins_env.split(",")
+else:
+    # Default production origins (can be overridden in .env file)
+    cors_origins = ["https://probeops.com", "https://www.probeops.com"]
+
 logger.info(f"Configuring CORS with origins: {cors_origins}")
 
 # List of headers we want to allow

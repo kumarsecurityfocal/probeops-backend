@@ -147,7 +147,7 @@ Key CORS Features:
 
 In production, you should explicitly set allowed origins in `.env.backend`:
 ```
-CORS_ORIGINS=http://35.173.110.195:3000,http://localhost:3000
+CORS_ORIGINS=https://probeops.com,https://www.probeops.com
 ```
 
 ## Development
