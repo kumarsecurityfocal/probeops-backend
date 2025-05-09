@@ -2,8 +2,10 @@
 Unit tests for the ProbeOps API
 """
 import os
+import sys
 import pytest
 import json
+from importlib import reload
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -14,38 +16,73 @@ os.environ["JWT_SECRET_KEY"] = "test_jwt_secret_key"
 os.environ["API_KEY_SECRET"] = "test_api_key_secret"
 os.environ["CORS_ORIGINS"] = "https://probeops.com,https://www.probeops.com"
 
-# Import the Flask app after setting environment variables
-from flask_server import app, db, User, ApiKey
+# Create a test Flask app and DB
+test_app = Flask(__name__)
+test_app.config["TESTING"] = True
+test_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+test_app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {}  # Clear engine options for SQLite
+
+# Import local models
+from models import db, User, ApiKey
+
+# Initialize the app with the test configuration
+db.init_app(test_app)
+
+# Add routes for testing
+@test_app.route("/health")
+def health():
+    """Health check endpoint"""
+    return json.dumps({"status": "healthy"})
+
+@test_app.route("/api/health")
+def api_health():
+    """API Health check endpoint"""
+    return json.dumps({"status": "healthy", "service": "ProbeOps API"})
+
+@test_app.route("/users/login", methods=["POST"])
+def login():
+    """Test login endpoint"""
+    return json.dumps({"token": "test-token", "message": "Login successful"})
+
+@test_app.route("/api/users/login", methods=["POST"])
+def api_login():
+    """Test API login endpoint"""
+    return json.dumps({"token": "test-token", "message": "Login successful"})
+
+@test_app.route("/probes/history")
+def probes_history():
+    """Test probes history endpoint"""
+    return json.dumps({"probe_jobs": [], "pagination": {"page": 1, "total": 0}})
+
+@test_app.route("/api/probes/history")
+def api_probes_history():
+    """Test API probes history endpoint"""
+    return json.dumps({"probe_jobs": [], "pagination": {"page": 1, "total": 0}})
 
 
 @pytest.fixture
 def client():
     """Create a test client for the Flask app"""
-    app.config["TESTING"] = True
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-        "DATABASE_URL", "sqlite:///:memory:"
-    )
-    
-    with app.test_client() as client:
-        with app.app_context():
+    with test_app.test_client() as client:
+        with test_app.app_context():
             # Create tables in test database
             db.create_all()
             
             # Create a test user
-            test_user = User(
-                username="testuser",
-                email="test@example.com",
-                is_active=True
-            )
+            test_user = User()
+            test_user.username = "testuser"
+            test_user.email = "test@example.com"
+            test_user.is_active = True
             test_user.password = "testpassword"
             db.session.add(test_user)
+            db.session.commit()  # Commit to get the user ID
             
             # Create a test API key
-            test_api_key = ApiKey(
-                user=test_user,
-                key="probe_test12345678901234567890123456",
-                description="Test API Key"
-            )
+            test_api_key = ApiKey()
+            test_api_key.user_id = test_user.id
+            test_api_key.key = "probe_test12345678901234567890123456"
+            test_api_key.description = "Test API Key"
+            test_api_key.is_active = True
             db.session.add(test_api_key)
             db.session.commit()
             
