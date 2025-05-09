@@ -41,62 +41,56 @@ A modular backend system for network diagnostics with JWT authentication and Pos
 - `GET /health` - Health check endpoint
 - `GET /status` - Server status (admin only)
 
-## Production Setup
+## Setup & Deployment
 
-### Environment Variables
+The application supports separate configurations for development and production environments. See [deployment.md](deployment.md) for detailed deployment instructions.
 
-Create a `.env` file with the following variables:
+### Environment Configuration
 
-```
-# Database Configuration
-DATABASE_URL=postgresql://username:password@localhost:5432/probeops
-POSTGRES_USER=username
-POSTGRES_PASSWORD=password
-POSTGRES_DB=probeops
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+We provide template environment files for both development and production:
 
-# JWT Configuration
-JWT_SECRET_KEY=your-jwt-secret-key
-JWT_ALGORITHM=HS256
-JWT_EXPIRATION_MINUTES=60
+- `.env.template` - For local development (rename to `.env`)
+- `.env.backend.template` - For production (rename to `.env.backend`)
 
-# API Configuration
-API_KEY_SECRET=your-api-key-secret
-API_PORT=5000
-WORKERS=4
-WORKER_TIMEOUT=120
-KEEPALIVE=5
+### Development Setup
 
-# Environment
-DEBUG=False
-LOG_LEVEL=info
-ENVIRONMENT=production
+```bash
+# Copy development environment template
+cp .env.template .env
+
+# Edit the .env file with your desired values
+nano .env
+
+# Start development containers
+docker-compose up -d
 ```
 
-### Direct Deployment
+### Production Setup
+
+```bash
+# Copy production environment template
+cp .env.backend.template .env.backend
+
+# Edit with secure production values
+nano .env.backend
+
+# Start production backend containers
+docker-compose -f docker-compose.backend.yml up -d
+```
+
+### Direct Deployment (Without Docker)
 
 1. Install dependencies:
-   ```
+   ```bash
    pip install -r requirements.txt
    ```
 
-2. Run the application:
-   ```
+2. Run the application using the startup script:
+   ```bash
    ./start.sh
    ```
 
-### Docker Deployment
-
-1. Build and start the containers:
-   ```
-   docker-compose up -d
-   ```
-
-2. For production deployment:
-   ```
-   docker-compose -f docker-compose.prod.yml up -d
-   ```
+The startup script includes database waiting, table creation, and automatic worker scaling based on available CPU cores.
 
 ## Frontend Integration
 
@@ -145,8 +139,14 @@ The system uses the following main database models:
   - `/probes`: Network diagnostic tools
   - `/utils`: Utility functions
 - `/docs`: Documentation files
-- `Dockerfile` & `docker-compose.yml`: Docker configuration
-- `start.sh`: Startup script for production
+- Docker configuration:
+  - `Dockerfile`: Container definition
+  - `docker-compose.yml`: Development environment setup
+  - `docker-compose.backend.yml`: Production backend setup
+  - `.env.template`: Development environment template
+  - `.env.backend.template`: Production environment template
+- `start.sh`: Startup script with auto-scaling and database initialization
+- `deployment.md`: Detailed deployment guide with troubleshooting
 
 ## Performance Tuning
 
