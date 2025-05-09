@@ -417,10 +417,15 @@ def ping_probe():
         job = save_probe_job("ping", host, parameters, result, success)
         
         response = format_response(success, "ping", host, result, job.id if job else 0)
-        return jsonify(response)
+        response_json = jsonify(response)
+        # Ensure proper Content-Type header
+        response_json.headers['Content-Type'] = 'application/json'
+        return response_json
     except Exception as e:
         logger.exception(f"Error in ping probe: {str(e)}")
-        return jsonify(format_response(False, "ping", host, f"Error: {str(e)}")), 500
+        error_response = jsonify(format_response(False, "ping", host, f"Error: {str(e)}"))
+        error_response.headers['Content-Type'] = 'application/json'
+        return error_response, 500
 
 
 @bp.route("/traceroute", methods=["GET", "POST"])
@@ -448,10 +453,15 @@ def traceroute_probe():
         job = save_probe_job("traceroute", host, parameters, result, success)
         
         response = format_response(success, "traceroute", host, result, job.id if job else 0)
-        return jsonify(response)
+        response_json = jsonify(response)
+        # Ensure proper Content-Type header
+        response_json.headers['Content-Type'] = 'application/json'
+        return response_json
     except Exception as e:
         logger.exception(f"Error in traceroute probe: {str(e)}")
-        return jsonify(format_response(False, "traceroute", host, f"Error: {str(e)}")), 500
+        error_response = jsonify(format_response(False, "traceroute", host, f"Error: {str(e)}"))
+        error_response.headers['Content-Type'] = 'application/json'
+        return error_response, 500
 
 
 @bp.route("/dns", methods=["GET", "POST"])
