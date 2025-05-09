@@ -1448,14 +1448,8 @@ def handle_json_error():
             }), 400
 
 
-@app.errorhandler(400)
-def bad_request_error(error):
-    """Handle 400 errors uniformly"""
-    logger.error(f"Bad Request error: {str(error)}")
-    return jsonify({
-        "error": "Bad Request",
-        "message": "The request could not be processed. Please check your JSON format."
-    }), 400
+# This error handler was removed as it was a duplicate of the one above
+# Now only one @app.errorhandler(400) exists in the code
 
 
 # Admin routes for server management
