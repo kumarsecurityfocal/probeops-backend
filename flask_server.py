@@ -14,7 +14,7 @@ from functools import wraps
 from pathlib import Path
 
 import jwt
-from flask import Flask, jsonify, request, g
+from flask import Flask, jsonify, request, g, Blueprint
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
@@ -941,6 +941,63 @@ def setup_database():
 # Set up database after app initialization
 with app.app_context():
     setup_database()
+
+# Import and register the API Blueprint
+from api_blueprint import api_bp
+
+# Register the blueprint with the app
+app.register_blueprint(api_bp)
+
+# Create proxied Blueprint routes
+# This creates duplicate routes under /api prefix for compatibility
+api_proxy_bp = Blueprint('api_proxy', __name__, url_prefix='/api')
+
+@api_proxy_bp.route('/users/register', methods=["POST"])
+def proxy_register():
+    return register()
+
+@api_proxy_bp.route('/users/login', methods=["POST"])
+def proxy_login():
+    return login()
+
+@api_proxy_bp.route('/users/me', methods=["GET"])
+def proxy_current_user_info():
+    return get_current_user_info()
+
+@api_proxy_bp.route('/users', methods=["GET"])
+def proxy_list_users():
+    return list_users()
+
+@api_proxy_bp.route('/apikeys', methods=["GET"])
+def proxy_list_apikeys():
+    return list_apikeys()
+
+@api_proxy_bp.route('/apikeys', methods=["POST"])
+def proxy_create_apikey():
+    return create_apikey()
+
+@api_proxy_bp.route('/probes/ping', methods=["GET", "POST"])
+def proxy_ping_probe():
+    return ping_probe()
+
+@api_proxy_bp.route('/probes/traceroute', methods=["GET", "POST"])
+def proxy_traceroute_probe():
+    return traceroute_probe()
+
+@api_proxy_bp.route('/probes/dns', methods=["GET", "POST"])
+def proxy_dns_probe():
+    return dns_probe()
+
+@api_proxy_bp.route('/probes/whois', methods=["GET", "POST"])
+def proxy_whois_probe():
+    return whois_probe()
+
+@api_proxy_bp.route('/probes/history', methods=["GET"])
+def proxy_probe_history():
+    return probe_history()
+
+# Register the API proxy blueprint
+app.register_blueprint(api_proxy_bp)
 
 
 # API Routes
