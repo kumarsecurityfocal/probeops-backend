@@ -950,9 +950,11 @@ with app.app_context():
 
 # Import and register the API Blueprint
 from api_blueprint import api_bp
+from routes_ui import ui_blueprint
 
-# Register the blueprint with the app
+# Register the blueprints with the app
 app.register_blueprint(api_bp)
+app.register_blueprint(ui_blueprint)
 
 # Create proxied Blueprint routes
 # This creates duplicate routes under /api prefix for compatibility
@@ -1007,8 +1009,8 @@ app.register_blueprint(api_proxy_bp)
 
 
 # API Routes
-@app.route('/')
-def root():
+@app.route('/api')
+def api_root():
     """API root endpoint"""
     return jsonify({
         "name": "ProbeOps API",
