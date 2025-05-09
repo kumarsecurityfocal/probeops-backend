@@ -7,6 +7,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
 import logging
+from auth import admin_required
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -24,6 +25,20 @@ def health():
         "version": "1.0.0"
     })
 
+# Debug endpoint for proxy logs
+@api_bp.route('/debug/proxy-logs')
+@admin_required
+def proxy_logs():
+    """Debug endpoint for NGINX proxy logs - currently not implemented"""
+    logger.info("Request for proxy logs received, but feature is not implemented")
+    response = jsonify({
+        "error": "Not implemented",
+        "message": "The proxy logs feature is not currently implemented",
+        "status": 501
+    })
+    response.headers['Content-Type'] = 'application/json'
+    return response, 501
+
 # Mirror of root endpoint
 @api_bp.route('/')
 def root():
@@ -34,6 +49,7 @@ def root():
         "version": "1.0.0",
         "endpoints": {
             "/api/health": "Health check endpoint",
+            "/api/debug/proxy-logs": "Debug endpoint for NGINX proxy logs (admin only)",
             "/api/probes/ping": "Ping a host",
             "/api/probes/traceroute": "Run traceroute to a host",
             "/api/probes/dns": "Perform DNS lookup",
