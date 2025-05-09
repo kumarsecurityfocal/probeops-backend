@@ -1,8 +1,8 @@
 # ===========================================
-# ProbeOps API - Docker Compose Configuration
+# ProbeOps API - Development Docker Compose Configuration
 # ===========================================
-# This docker-compose file sets up the ProbeOps API with PostgreSQL
-# for local development and production deployment.
+# This docker-compose file sets up the ProbeOps API with PostgreSQL for local development.
+# For production deployment, use docker-compose.backend.yml instead.
 
 services:
   # ProbeOps API service
@@ -11,7 +11,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - ENVIRONMENT=${ENVIRONMENT:-production}
+        - ENVIRONMENT=${ENVIRONMENT:-development}
     image: probeops-api:${TAG:-latest}
     container_name: probeops-api
     restart: unless-stopped
