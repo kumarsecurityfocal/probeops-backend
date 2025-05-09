@@ -20,11 +20,11 @@ First, prepare your production environment file:
 # On your AWS server after cloning the repository
 git clone <your-repository-url>
 cd probeops-api
-cp .env.template .env.prod
-nano .env.prod  # or your preferred editor
+cp .env.backend.template .env.backend
+nano .env.backend  # or your preferred editor
 ```
 
-In the .env.prod file, configure:
+In the .env.backend file, configure:
 
 - **Security settings**: Change all default secrets (JWT_SECRET_KEY, API_KEY_SECRET, POSTGRES_PASSWORD)
 - **Database configuration**: Update for AWS RDS or local container
@@ -89,20 +89,27 @@ If using the containerized PostgreSQL:
 
 ### 3. Docker Deployment
 
-The production deployment uses docker-compose.prod.yml which:
+The production deployment uses docker-compose.backend.yml which:
 - Disables volume mounts for code (uses containerized code)
 - Doesn't expose the database port externally
 - Has optimized resource limits
-- Uses .env.prod for configuration
+- Uses .env.backend for configuration
+- Includes enhanced security settings
 
 To deploy:
 
 ```bash
+# Copy the environment template for production
+cp .env.backend.template .env.backend
+
+# Edit with your secure production values
+nano .env.backend
+
 # Build the Docker images
-docker-compose -f docker-compose.prod.yml build
+docker-compose -f docker-compose.backend.yml build
 
 # Start all services in detached mode
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.backend.yml up -d
 ```
 
 ### 4. Verify Deployment
@@ -111,10 +118,10 @@ After deployment, verify everything is working:
 
 ```bash
 # Check container status
-docker-compose -f docker-compose.prod.yml ps
+docker-compose -f docker-compose.backend.yml ps
 
 # Check application logs
-docker-compose -f docker-compose.prod.yml logs -f api
+docker-compose -f docker-compose.backend.yml logs -f api
 
 # Test the health endpoint
 curl http://localhost:5000/health
@@ -184,10 +191,10 @@ Set up regular database backups:
 
 ```bash
 # For containerized PostgreSQL
-docker-compose -f docker-compose.prod.yml exec db pg_dump -U probeops probeops > backup_$(date +%Y%m%d).sql
+docker-compose -f docker-compose.backend.yml exec db pg_dump -U probeops probeops > backup_$(date +%Y%m%d).sql
 
 # Add to crontab for automated backups
-# 0 2 * * * cd /path/to/probeops && docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U probeops probeops > backups/backup_$(date +\%Y\%m\%d).sql
+# 0 2 * * * cd /path/to/probeops && docker-compose -f docker-compose.backend.yml exec -T db pg_dump -U probeops probeops > backups/backup_$(date +\%Y\%m\%d).sql
 ```
 
 #### Updating the Application
@@ -199,12 +206,12 @@ To update to a new version:
 git pull
 
 # Rebuild and restart containers
-docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml build
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.backend.yml down
+docker-compose -f docker-compose.backend.yml build
+docker-compose -f docker-compose.backend.yml up -d
 
 # Check logs to ensure successful startup
-docker-compose -f docker-compose.prod.yml logs -f api
+docker-compose -f docker-compose.backend.yml logs -f api
 ```
 
 #### Monitoring
@@ -222,7 +229,7 @@ If the API cannot connect to the database:
 
 1. Check database logs:
    ```bash
-   docker-compose -f docker-compose.prod.yml logs db
+   docker-compose -f docker-compose.backend.yml logs db
    ```
 
 2. Verify RDS connectivity from EC2:
@@ -238,12 +245,12 @@ If the API container isn't starting:
 
 1. Check API logs:
    ```bash
-   docker-compose -f docker-compose.prod.yml logs api
+   docker-compose -f docker-compose.backend.yml logs api
    ```
 
 2. Verify environment variables:
    ```bash
-   docker-compose -f docker-compose.prod.yml exec api env
+   docker-compose -f docker-compose.backend.yml exec api env
    ```
 
 3. Check for port conflicts:

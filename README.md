@@ -115,11 +115,30 @@ When connecting a frontend application to this API:
 
 ### CORS Configuration
 
-The API is configured to accept cross-origin requests with the following settings:
-- All origins are allowed (`*`)
-- Credentials are supported
-- All standard methods (GET, POST, PUT, DELETE, OPTIONS) are allowed
-- Authorization and API key headers are allowed
+The API is configured with comprehensive CORS support to allow direct frontend integration:
+
+```python
+CORS(
+    app,
+    origins="*",  # Allow all origins
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Content-Type", "Authorization", "X-API-Key", "X-Requested-With",
+        "Accept", "Origin", "Access-Control-Request-Method", 
+        "Access-Control-Request-Headers", "ApiKey", "Api-Key"
+    ],
+    supports_credentials=True,
+    expose_headers=["Content-Type", "Authorization", "X-API-Key"],
+    max_age=3600  # Cache preflight requests for 1 hour
+)
+```
+
+Key CORS Features:
+- **Universal Access**: All origins are allowed for development and testing
+- **Credential Support**: Authentication works cross-origin
+- **Header Flexibility**: Supports multiple API key header formats
+- **Preflight Caching**: OPTIONS requests are cached for better performance
+- **Comprehensive Methods**: All required HTTP methods are supported
 
 ## Development
 
@@ -150,11 +169,31 @@ The system uses the following main database models:
 
 ## Performance Tuning
 
-The application uses gunicorn with the following optimizations:
-- **Workers**: Automatically calculated based on CPU cores (2*cores+1)
-- **Worker recycling**: Workers are recycled after processing 1000 requests
-- **Keepalive**: Connections are kept alive for 5 seconds
-- **Timeout**: Workers timeout after 120 seconds
+### Gunicorn Optimizations
+
+The enhanced `start.sh` script configures gunicorn with the following optimizations:
+
+```bash
+exec gunicorn --workers "${WORKERS}" \
+    --bind "0.0.0.0:${API_PORT:-5000}" \
+    --timeout "${WORKER_TIMEOUT}" \
+    --keep-alive "${KEEPALIVE}" \
+    --max-requests "${MAX_REQUESTS}" \
+    --max-requests-jitter "${MAX_REQUESTS_JITTER}" \
+    --log-level "${LOG_LEVEL:-info}" \
+    --access-logfile - \
+    --error-logfile - \
+    --forwarded-allow-ips "*" \
+    "main:app"
+```
+
+Key performance features:
+- **Smart Worker Scaling**: Automatically calculated based on CPU cores (2*cores+1)
+- **Worker Recycling**: Workers are recycled after processing 1000 requests to prevent memory leaks
+- **Request Jitter**: Randomized recycling prevents all workers recycling simultaneously
+- **Connection Keepalive**: Connections are kept alive for 5 seconds to reduce overhead
+- **Configurable Timeouts**: Workers timeout after 120 seconds by default
+- **Proxy Support**: Properly handles forwarded headers in production environments
 
 ## Troubleshooting
 
