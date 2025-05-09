@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProbeOps API Documentation</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <style>
+        .container {
+            max-width: 900px;
+            margin-top: 20px;
+        }
+        pre {
+            background-color: #282c34;
+            padding: 10px;
+            border-radius: 5px;
+            color: #abb2bf;
+            overflow: auto;
+        }
+        .endpoint {
+            margin-bottom: 30px;
+            border-left: 3px solid #3498db;
+            padding-left: 15px;
+        }
+        .get {
+            border-left-color: #28a745;
+        }
+        .post {
+            border-left-color: #17a2b8;
+        }
+        .put {
+            border-left-color: #ffc107;
+        }
+        .delete {
+            border-left-color: #dc3545;
+        }
+        .method {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .method.get {
+            background-color: #28a745;
+        }
+        .method.post {
+            background-color: #17a2b8;
+        }
+        .method.put {
+            background-color: #ffc107;
+            color: #343a40;
+        }
+        .method.delete {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body data-bs-theme="dark">
+    <div class="container">
+        <header class="mb-4">
+            <h1>ProbeOps API Documentation</h1>
+            <p class="lead">A comprehensive API for network diagnostics and monitoring.</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="/" class="btn btn-primary">Back to API Tester</a>
+                <div>
+                    <span class="badge bg-success">Version: 1.0.0</span>
+                    <span class="badge bg-info">Base URL: /api</span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Authentication</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>The API supports two authentication methods:</p>
+                        <h6>1. JWT Token Authentication</h6>
+                        <p>Include the token in the Authorization header:</p>
+                        <pre>Authorization: Bearer {token}</pre>
+                        <h6>2. API Key Authentication</h6>
+                        <p>Include the API key in the X-API-Key header:</p>
+                        <pre>X-API-Key: {api_key}</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Rate Limiting</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>The API implements rate limiting to prevent abuse:</p>
+                        <ul>
+                            <li>Authentication endpoints: 5 requests per minute</li>
+                            <li>Probe endpoints: 30 requests per minute</li>
+                            <li>Other endpoints: 60 requests per minute</li>
+                        </ul>
+                        <p>When rate limited, the API will return a <code>429 Too Many Requests</code> status code with a <code>Retry-After</code> header.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="accordion" id="apiDocsAccordion">
+            <!-- Authentication Endpoints -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#authEndpoints" aria-expanded="true" aria-controls="authEndpoints">
+                        Authentication Endpoints
+                    </button>
+                </h2>
+                <div id="authEndpoints" class="accordion-collapse collapse show" data-bs-parent="#apiDocsAccordion">
+                    <div class="accordion-body">
+                        <div class="endpoint post">
+                            <h3><span class="method post">POST</span> /api/users/register</h3>
+                            <p>Register a new user.</p>
+                            
+                            <h5>Request</h5>
+                            <pre>{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "securepassword"
+}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "message": "User registered successfully",
+  "username": "johndoe",
+  "email": "john@example.com"
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint post">
+                            <h3><span class="method post">POST</span> /api/users/login</h3>
+                            <p>Login and get a JWT token.</p>
+                            
+                            <h5>Request</h5>
+                            <pre>{
+  "username": "johndoe",
+  "password": "securepassword"
+}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user_id": 1,
+  "username": "johndoe"
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint get">
+                            <h3><span class="method get">GET</span> /api/users/me</h3>
+                            <p>Get current user information.</p>
+                            
+                            <h5>Headers</h5>
+                            <pre>Authorization: Bearer {token}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "id": 1,
+  "username": "johndoe",
+  "email": "john@example.com",
+  "created_at": "2025-05-09T12:00:00Z",
+  "is_active": true
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- API Key Endpoints -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#apikeyEndpoints" aria-expanded="false" aria-controls="apikeyEndpoints">
+                        API Key Endpoints
+                    </button>
+                </h2>
+                <div id="apikeyEndpoints" class="accordion-collapse collapse" data-bs-parent="#apiDocsAccordion">
+                    <div class="accordion-body">
+                        <div class="endpoint get">
+                            <h3><span class="method get">GET</span> /api/apikeys</h3>
+                            <p>List API keys for the current user.</p>
+                            
+                            <h5>Headers</h5>
+                            <pre>Authorization: Bearer {token}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "api_keys": [
+    {
+      "id": 1,
+      "key": "probe_1234567890abcdef1234567890abcdef",
+      "description": "My API Key",
+      "created_at": "2025-05-09T12:00:00Z",
+      "last_used_at": "2025-05-09T13:00:00Z",
+      "is_active": true
+    }
+  ]
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint post">
+                            <h3><span class="method post">POST</span> /api/apikeys</h3>
+                            <p>Create a new API key.</p>
+                            
+                            <h5>Headers</h5>
+                            <pre>Authorization: Bearer {token}</pre>
+                            
+                            <h5>Request</h5>
+                            <pre>{
+  "description": "My API Key"
+}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "id": 2,
+  "key": "probe_abcdef1234567890abcdef1234567890",
+  "description": "My API Key",
+  "created_at": "2025-05-09T14:00:00Z",
+  "is_active": true
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint delete">
+                            <h3><span class="method delete">DELETE</span> /api/apikeys/{id}</h3>
+                            <p>Delete an API key.</p>
+                            
+                            <h5>Headers</h5>
+                            <pre>Authorization: Bearer {token}</pre>
+                            
+                            <h5>Response</h5>
+                            <p>Status: 204 No Content</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Probe Endpoints -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#probeEndpoints" aria-expanded="false" aria-controls="probeEndpoints">
+                        Network Probe Endpoints
+                    </button>
+                </h2>
+                <div id="probeEndpoints" class="accordion-collapse collapse" data-bs-parent="#apiDocsAccordion">
+                    <div class="accordion-body">
+                        <div class="endpoint post">
+                            <h3><span class="method post">POST</span> /api/probes/ping</h3>
+                            <p>Run a ping probe.</p>
+                            
+                            <h5>Authentication</h5>
+                            <pre>Authorization: Bearer {token}
+// or
+X-API-Key: {api_key}</pre>
+                            
+                            <h5>Request</h5>
+                            <pre>{
+  "host": "example.com",
+  "count": 4
+}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "success": true,
+  "probe_type": "ping",
+  "target": "example.com",
+  "result": "PING example.com (93.184.216.34) 56(84) bytes of data.\n64 bytes from 93.184.216.34: icmp_seq=1 ttl=56 time=11.6 ms\n64 bytes from 93.184.216.34: icmp_seq=2 ttl=56 time=11.8 ms\n64 bytes from 93.184.216.34: icmp_seq=3 ttl=56 time=11.7 ms\n64 bytes from 93.184.216.34: icmp_seq=4 ttl=56 time=11.7 ms\n\n--- example.com ping statistics ---\n4 packets transmitted, 4 received, 0% packet loss, time 3005ms\nrtt min/avg/max/mdev = 11.585/11.701/11.832/0.101 ms",
+  "job_id": 1
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint post">
+                            <h3><span class="method post">POST</span> /api/probes/traceroute</h3>
+                            <p>Run a traceroute probe.</p>
+                            
+                            <h5>Authentication</h5>
+                            <pre>Authorization: Bearer {token}
+// or
+X-API-Key: {api_key}</pre>
+                            
+                            <h5>Request</h5>
+                            <pre>{
+  "host": "example.com",
+  "max_hops": 15
+}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "success": true,
+  "probe_type": "traceroute",
+  "target": "example.com",
+  "result": "traceroute to example.com (93.184.216.34), 15 hops max\n 1  router.local (192.168.1.1)  1.123 ms  1.456 ms  1.789 ms\n 2  isp-gateway.net (10.0.0.1)  11.123 ms  11.456 ms  11.789 ms\n ...\n 8  example-edge.net (93.184.216.1)  20.123 ms  20.456 ms  20.789 ms\n 9  example.com (93.184.216.34)  21.123 ms  21.456 ms  21.789 ms",
+  "job_id": 2
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint post">
+                            <h3><span class="method post">POST</span> /api/probes/dns</h3>
+                            <p>Run a DNS lookup probe.</p>
+                            
+                            <h5>Authentication</h5>
+                            <pre>Authorization: Bearer {token}
+// or
+X-API-Key: {api_key}</pre>
+                            
+                            <h5>Request</h5>
+                            <pre>{
+  "domain": "example.com",
+  "record_type": "A"
+}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "success": true,
+  "probe_type": "dns",
+  "target": "example.com",
+  "result": "example.com.\t\t300\tIN\tA\t93.184.216.34",
+  "job_id": 3
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint post">
+                            <h3><span class="method post">POST</span> /api/probes/whois</h3>
+                            <p>Run a WHOIS lookup probe.</p>
+                            
+                            <h5>Authentication</h5>
+                            <pre>Authorization: Bearer {token}
+// or
+X-API-Key: {api_key}</pre>
+                            
+                            <h5>Request</h5>
+                            <pre>{
+  "domain": "example.com"
+}</pre>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "success": true,
+  "probe_type": "whois",
+  "target": "example.com",
+  "result": "Domain Name: EXAMPLE.COM\nRegistry Domain ID: 2336799_DOMAIN_COM-VRSN\nRegistrar WHOIS Server: whois.iana.org\nRegistrar URL: http://www.iana.org\nUpdated Date: 2023-08-14T07:01:31Z\nCreation Date: 1995-08-14T04:00:00Z\nRegistry Expiry Date: 2024-08-13T04:00:00Z\nRegistrar: IANA\nRegistrar IANA ID: 376\nRegistrar Abuse Contact Email: res-abuse@iana.org\nRegistrar Abuse Contact Phone: +1.3103015800\nDomain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\nDomain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\nDomain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\nName Server: A.IANA-SERVERS.NET\nName Server: B.IANA-SERVERS.NET\nDNSSEC: signedDelegation\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\n>>> Last update of whois database: 2025-05-09T14:00:00Z <<<",
+  "job_id": 4
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint get">
+                            <h3><span class="method get">GET</span> /api/probes/history</h3>
+                            <p>Get probe job history.</p>
+                            
+                            <h5>Authentication</h5>
+                            <pre>Authorization: Bearer {token}
+// or
+X-API-Key: {api_key}</pre>
+                            
+                            <h5>Query Parameters</h5>
+                            <ul>
+                                <li><code>page</code> (optional): Page number, default 1</li>
+                                <li><code>per_page</code> (optional): Items per page, default 10</li>
+                                <li><code>sort_by</code> (optional): Field to sort by, default "created_at"</li>
+                                <li><code>sort_order</code> (optional): Sort order, "asc" or "desc", default "desc"</li>
+                            </ul>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "probe_jobs": [
+    {
+      "id": 4,
+      "probe_type": "whois",
+      "target": "example.com",
+      "success": true,
+      "created_at": "2025-05-09T14:00:00Z"
+    },
+    {
+      "id": 3,
+      "probe_type": "dns",
+      "target": "example.com",
+      "success": true,
+      "created_at": "2025-05-09T13:30:00Z"
+    },
+    ...
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 10,
+    "total": 42,
+    "pages": 5,
+    "next": "/api/probes/history?page=2&per_page=10",
+    "prev": null
+  }
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Utility Endpoints -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#utilityEndpoints" aria-expanded="false" aria-controls="utilityEndpoints">
+                        Utility Endpoints
+                    </button>
+                </h2>
+                <div id="utilityEndpoints" class="accordion-collapse collapse" data-bs-parent="#apiDocsAccordion">
+                    <div class="accordion-body">
+                        <div class="endpoint get">
+                            <h3><span class="method get">GET</span> /api/health</h3>
+                            <p>Health check endpoint.</p>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "status": "healthy",
+  "service": "ProbeOps API",
+  "version": "1.0.0",
+  "timestamp": "2025-05-09T14:00:00Z"
+}</pre>
+                        </div>
+                        
+                        <div class="endpoint get">
+                            <h3><span class="method get">GET</span> /api</h3>
+                            <p>API root endpoint.</p>
+                            
+                            <h5>Response</h5>
+                            <pre>{
+  "name": "ProbeOps API",
+  "version": "1.0.0",
+  "description": "Network Diagnostics API with Authentication",
+  "documentation": "/docs",
+  "health": "/api/health",
+  "endpoints": [
+    "/api/users",
+    "/api/apikeys",
+    "/api/probes"
+  ]
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h2>Error Handling</h2>
+            <p>The API returns consistent error responses with HTTP status codes and JSON error messages:</p>
+            
+            <pre>{
+  "error": true,
+  "message": "Error message explaining what went wrong",
+  "status_code": 400,
+  "timestamp": "2025-05-09T14:00:00Z"
+}</pre>
+            
+            <h5>Common Error Status Codes</h5>
+            <ul>
+                <li><code>400 Bad Request</code>: Invalid input parameters</li>
+                <li><code>401 Unauthorized</code>: Authentication required or failed</li>
+                <li><code>403 Forbidden</code>: Permission denied</li>
+                <li><code>404 Not Found</code>: Resource not found</li>
+                <li><code>429 Too Many Requests</code>: Rate limit exceeded</li>
+                <li><code>500 Internal Server Error</code>: Server-side error</li>
+            </ul>
+        </div>
+    </div>
+    
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5>ProbeOps API</h5>
+                    <p>© 2025 ProbeOps. All rights reserved.</p>
+                </div>
+                <div>
+                    <a href="/" class="btn btn-outline-light">Back to API Tester</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

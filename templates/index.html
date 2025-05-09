@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProbeOps API Tester</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <style>
+        .container {
+            max-width: 900px;
+            margin-top: 20px;
+        }
+        pre {
+            background-color: #282c34;
+            padding: 10px;
+            border-radius: 5px;
+            color: #abb2bf;
+            min-height: 100px;
+            max-height: 300px;
+            overflow: auto;
+        }
+        .api-key-display {
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body data-bs-theme="dark">
+    <div class="container">
+        <h1 class="mb-4">ProbeOps API Tester</h1>
+        
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="authentication-tab" data-bs-toggle="tab" data-bs-target="#authentication" type="button" role="tab" aria-controls="authentication" aria-selected="true">Authentication</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="probes-tab" data-bs-toggle="tab" data-bs-target="#probes" type="button" role="tab" aria-controls="probes" aria-selected="false">Network Probes</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="apikeys-tab" data-bs-toggle="tab" data-bs-target="#apikeys" type="button" role="tab" aria-controls="apikeys" aria-selected="false">API Keys</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">History</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content mt-3" id="myTabContent">
+            <!-- Authentication Tab -->
+            <div class="tab-pane fade show active" id="authentication" role="tabpanel" aria-labelledby="authentication-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Register</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="registerForm">
+                                    <div class="mb-3">
+                                        <label for="registerUsername" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="registerUsername" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="registerEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="registerEmail" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="registerPassword" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="registerPassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Register</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Login</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="loginForm">
+                                    <div class="mb-3">
+                                        <label for="loginUsername" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="loginUsername" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="loginPassword" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="loginPassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Login</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Current User</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="userInfo">
+                            <p class="text-muted">Not logged in</p>
+                        </div>
+                        <div class="mb-3">
+                            <button id="getUserBtn" class="btn btn-secondary" disabled>Get User Info</button>
+                            <button id="logoutBtn" class="btn btn-danger" disabled>Logout</button>
+                        </div>
+                        <div class="mt-3">
+                            <h6>JWT Token</h6>
+                            <div class="api-key-display" id="jwtTokenDisplay">
+                                <p class="text-muted">No token</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Network Probes Tab -->
+            <div class="tab-pane fade" id="probes" role="tabpanel" aria-labelledby="probes-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Ping</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="pingForm">
+                                    <div class="mb-3">
+                                        <label for="pingHost" class="form-label">Host</label>
+                                        <input type="text" class="form-control" id="pingHost" placeholder="example.com" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="pingCount" class="form-label">Count</label>
+                                        <input type="number" class="form-control" id="pingCount" value="4" min="1" max="10">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Run Ping</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Traceroute</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="tracerouteForm">
+                                    <div class="mb-3">
+                                        <label for="tracerouteHost" class="form-label">Host</label>
+                                        <input type="text" class="form-control" id="tracerouteHost" placeholder="example.com" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tracerouteMaxHops" class="form-label">Max Hops</label>
+                                        <input type="number" class="form-control" id="tracerouteMaxHops" value="15" min="1" max="30">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Run Traceroute</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>DNS Lookup</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="dnsForm">
+                                    <div class="mb-3">
+                                        <label for="dnsDomain" class="form-label">Domain</label>
+                                        <input type="text" class="form-control" id="dnsDomain" placeholder="example.com" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="dnsRecordType" class="form-label">Record Type</label>
+                                        <select class="form-select" id="dnsRecordType">
+                                            <option value="A">A</option>
+                                            <option value="AAAA">AAAA</option>
+                                            <option value="CNAME">CNAME</option>
+                                            <option value="MX">MX</option>
+                                            <option value="TXT">TXT</option>
+                                            <option value="NS">NS</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Run DNS Lookup</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>WHOIS Lookup</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="whoisForm">
+                                    <div class="mb-3">
+                                        <label for="whoisDomain" class="form-label">Domain</label>
+                                        <input type="text" class="form-control" id="whoisDomain" placeholder="example.com" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Run WHOIS Lookup</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Result</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre id="probeResult">No result yet. Run a probe to see results here.</pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- API Keys Tab -->
+            <div class="tab-pane fade" id="apikeys" role="tabpanel" aria-labelledby="apikeys-tab">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5>Create API Key</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="createApiKeyForm">
+                            <div class="mb-3">
+                                <label for="apiKeyDescription" class="form-label">Description</label>
+                                <input type="text" class="form-control" id="apiKeyDescription" placeholder="My API Key" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create API Key</button>
+                        </form>
+                        
+                        <div class="mt-3" id="newApiKeyContainer" style="display: none;">
+                            <div class="alert alert-warning">
+                                <h6>New API Key Created</h6>
+                                <p>This key will only be shown once. Please save it securely.</p>
+                                <div class="api-key-display" id="newApiKeyDisplay"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Your API Keys</h5>
+                        <button id="refreshApiKeysBtn" class="btn btn-sm btn-secondary">Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="apiKeysList">
+                            <p class="text-muted">Login to view your API keys</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Tab -->
+            <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Probe History</h5>
+                        <div>
+                            <button id="refreshHistoryBtn" class="btn btn-sm btn-secondary me-2">Refresh</button>
+                            <select id="sortBySelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                                <option value="created_at">Date</option>
+                                <option value="probe_type">Probe Type</option>
+                                <option value="target">Target</option>
+                                <option value="success">Success</option>
+                            </select>
+                            <select id="sortOrderSelect" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                                <option value="desc">Descending</option>
+                                <option value="asc">Ascending</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Target</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">Login to view history</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center" id="historyPagination">
+                                <!-- Pagination will be added here -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Job Details Modal -->
+        <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="jobDetailsModalLabel">Probe Job Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Job ID:</strong> <span id="modalJobId"></span></p>
+                                <p><strong>Date:</strong> <span id="modalJobDate"></span></p>
+                                <p><strong>Type:</strong> <span id="modalJobType"></span></p>
+                                <p><strong>Target:</strong> <span id="modalJobTarget"></span></p>
+                                <p><strong>Status:</strong> <span id="modalJobStatus"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Parameters:</strong></p>
+                                <pre id="modalJobParameters" class="small"></pre>
+                            </div>
+                        </div>
+                        <div>
+                            <p><strong>Result:</strong></p>
+                            <pre id="modalJobResult"></pre>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="modalRunAgainBtn">Run Again</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Base API URL
+        const API_BASE_URL = '/api';
+        
+        // Store the JWT token
+        let jwtToken = localStorage.getItem('jwt_token');
+        let currentUser = null;
+        let currentApiKey = localStorage.getItem('api_key');
+        
+        // Update UI based on authentication state
+        function updateAuthUI() {
+            const isLoggedIn = !!jwtToken;
+            
+            document.getElementById('getUserBtn').disabled = !isLoggedIn;
+            document.getElementById('logoutBtn').disabled = !isLoggedIn;
+            
+            if (isLoggedIn) {
+                document.getElementById('jwtTokenDisplay').textContent = jwtToken;
+            } else {
+                document.getElementById('jwtTokenDisplay').innerHTML = '<p class="text-muted">No token</p>';
+                document.getElementById('userInfo').innerHTML = '<p class="text-muted">Not logged in</p>';
+            }
+            
+            // Also refresh API keys and history if logged in
+            if (isLoggedIn) {
+                fetchApiKeys();
+                fetchProbeHistory();
+            }
+        }
+        
+        // Fetch options with authentication
+        function getAuthFetchOptions(method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            if (jwtToken) {
+                options.headers['Authorization'] = `Bearer ${jwtToken}`;
+            } else if (currentApiKey) {
+                options.headers['X-API-Key'] = currentApiKey;
+            }
+            
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            
+            return options;
+        }
+        
+        // Handle registration
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Registration successful! You can now log in.');
+                    document.getElementById('registerForm').reset();
+                } else {
+                    alert(`Registration failed: ${data.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        });
+        
+        // Handle login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    jwtToken = data.token;
+                    localStorage.setItem('jwt_token', jwtToken);
+                    
+                    // Fetch user info
+                    await fetchUserInfo();
+                    
+                    alert('Login successful!');
+                    document.getElementById('loginForm').reset();
+                    updateAuthUI();
+                } else {
+                    alert(`Login failed: ${data.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        });
+        
+        // Fetch user info
+        async function fetchUserInfo() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/me`, getAuthFetchOptions());
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                    
+                    // Update UI
+                    document.getElementById('userInfo').innerHTML = `
+                        <p><strong>Username:</strong> ${data.username}</p>
+                        <p><strong>Email:</strong> ${data.email}</p>
+                        <p><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</p>
+                    `;
+                } else {
+                    throw new Error('Failed to fetch user info');
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+            }
+        }
+        
+        // Handle logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            jwtToken = null;
+            currentUser = null;
+            localStorage.removeItem('jwt_token');
+            
+            updateAuthUI();
+            alert('Logged out successfully');
+        });
+        
+        // Handle get user info button
+        document.getElementById('getUserBtn').addEventListener('click', fetchUserInfo);
+        
+        // Ping form
+        document.getElementById('pingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const host = document.getElementById('pingHost').value;
+            const count = document.getElementById('pingCount').value;
+            
+            await runProbe('ping', { host, count: parseInt(count) });
+        });
+        
+        // Traceroute form
+        document.getElementById('tracerouteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const host = document.getElementById('tracerouteHost').value;
+            const max_hops = document.getElementById('tracerouteMaxHops').value;
+            
+            await runProbe('traceroute', { host, max_hops: parseInt(max_hops) });
+        });
+        
+        // DNS form
+        document.getElementById('dnsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const domain = document.getElementById('dnsDomain').value;
+            const record_type = document.getElementById('dnsRecordType').value;
+            
+            await runProbe('dns', { domain, record_type });
+        });
+        
+        // WHOIS form
+        document.getElementById('whoisForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const domain = document.getElementById('whoisDomain').value;
+            
+            await runProbe('whois', { domain });
+        });
+        
+        // Run a probe
+        async function runProbe(probeType, data) {
+            try {
+                if (!jwtToken && !currentApiKey) {
+                    alert('You need to be logged in or use an API key to run probes');
+                    return;
+                }
+                
+                const resultElement = document.getElementById('probeResult');
+                resultElement.textContent = 'Running probe...';
+                
+                const response = await fetch(`${API_BASE_URL}/probes/${probeType}`, {
+                    method: 'POST',
+                    headers: getAuthFetchOptions('POST').headers,
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultElement.textContent = result.result || JSON.stringify(result, null, 2);
+                    
+                    // Refresh history
+                    fetchProbeHistory();
+                } else {
+                    resultElement.textContent = `Error: ${result.message || 'Unknown error'}`;
+                }
+            } catch (error) {
+                document.getElementById('probeResult').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Create API key
+        document.getElementById('createApiKeyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!jwtToken) {
+                alert('You need to be logged in to create API keys');
+                return;
+            }
+            
+            const description = document.getElementById('apiKeyDescription').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/apikeys`, {
+                    method: 'POST',
+                    headers: getAuthFetchOptions('POST').headers,
+                    body: JSON.stringify({ description })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Show the new API key
+                    document.getElementById('newApiKeyDisplay').textContent = data.key;
+                    document.getElementById('newApiKeyContainer').style.display = 'block';
+                    
+                    // Reset form
+                    document.getElementById('createApiKeyForm').reset();
+                    
+                    // Refresh API keys list
+                    fetchApiKeys();
+                } else {
+                    alert(`Failed to create API key: ${data.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        });
+        
+        // Fetch API keys
+        async function fetchApiKeys() {
+            if (!jwtToken) {
+                document.getElementById('apiKeysList').innerHTML = '<p class="text-muted">Login to view your API keys</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/apikeys`, getAuthFetchOptions());
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.api_keys.length === 0) {
+                        document.getElementById('apiKeysList').innerHTML = '<p class="text-muted">No API keys found</p>';
+                    } else {
+                        let html = '<div class="list-group">';
+                        
+                        data.api_keys.forEach(key => {
+                            html += `
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">${key.description || 'No description'}</h6>
+                                        <small>${new Date(key.created_at).toLocaleString()}</small>
+                                    </div>
+                                    <p class="mb-1 api-key-display">Key: ${key.key}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small>Last used: ${key.last_used_at ? new Date(key.last_used_at).toLocaleString() : 'Never'}</small>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-primary use-key-btn" data-key="${key.key}">Use This Key</button>
+                                            <button class="btn btn-sm btn-danger delete-key-btn" data-id="${key.id}">Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div>';
+                        document.getElementById('apiKeysList').innerHTML = html;
+                        
+                        // Add event listeners to the buttons
+                        document.querySelectorAll('.use-key-btn').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                currentApiKey = btn.dataset.key;
+                                localStorage.setItem('api_key', currentApiKey);
+                                alert(`Now using API key: ${currentApiKey.substring(0, 10)}...`);
+                            });
+                        });
+                        
+                        document.querySelectorAll('.delete-key-btn').forEach(btn => {
+                            btn.addEventListener('click', async () => {
+                                if (confirm('Are you sure you want to delete this API key?')) {
+                                    try {
+                                        const response = await fetch(`${API_BASE_URL}/apikeys/${btn.dataset.id}`, {
+                                            method: 'DELETE',
+                                            headers: getAuthFetchOptions('DELETE').headers
+                                        });
+                                        
+                                        if (response.ok) {
+                                            fetchApiKeys();
+                                        } else {
+                                            const data = await response.json();
+                                            alert(`Failed to delete API key: ${data.message || 'Unknown error'}`);
+                                        }
+                                    } catch (error) {
+                                        alert(`Error: ${error.message}`);
+                                    }
+                                }
+                            });
+                        });
+                    }
+                } else {
+                    throw new Error('Failed to fetch API keys');
+                }
+            } catch (error) {
+                document.getElementById('apiKeysList').innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Refresh API keys button
+        document.getElementById('refreshApiKeysBtn').addEventListener('click', fetchApiKeys);
+        
+        // Fetch probe history
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        async function fetchProbeHistory(page = 1, sortBy = 'created_at', sortOrder = 'desc') {
+            if (!jwtToken && !currentApiKey) {
+                document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted">Login to view history</td></tr>';
+                document.getElementById('historyPagination').innerHTML = '';
+                return;
+            }
+            
+            try {
+                const response = await fetch(
+                    `${API_BASE_URL}/probes/history?page=${page}&per_page=10&sort_by=${sortBy}&sort_order=${sortOrder}`,
+                    getAuthFetchOptions()
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update pagination state
+                    currentPage = data.pagination.page;
+                    totalPages = data.pagination.pages;
+                    
+                    if (data.probe_jobs.length === 0) {
+                        document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted">No probe history found</td></tr>';
+                    } else {
+                        let html = '';
+                        
+                        data.probe_jobs.forEach(job => {
+                            html += `
+                                <tr>
+                                    <td>${job.id}</td>
+                                    <td>${new Date(job.created_at).toLocaleString()}</td>
+                                    <td>${job.probe_type}</td>
+                                    <td>${job.target}</td>
+                                    <td><span class="badge ${job.success ? 'bg-success' : 'bg-danger'}">${job.success ? 'Success' : 'Failed'}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary view-job-btn" data-id="${job.id}">View</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        document.getElementById('historyTableBody').innerHTML = html;
+                        
+                        // Add event listeners to the view buttons
+                        document.querySelectorAll('.view-job-btn').forEach(btn => {
+                            btn.addEventListener('click', async () => {
+                                try {
+                                    const response = await fetch(`${API_BASE_URL}/probes/job/${btn.dataset.id}`, getAuthFetchOptions());
+                                    
+                                    if (response.ok) {
+                                        const job = await response.json();
+                                        showJobDetailsModal(job);
+                                    } else {
+                                        alert('Failed to fetch job details');
+                                    }
+                                } catch (error) {
+                                    alert(`Error: ${error.message}`);
+                                }
+                            });
+                        });
+                    }
+                    
+                    // Update pagination
+                    updatePagination(data.pagination);
+                } else {
+                    throw new Error('Failed to fetch probe history');
+                }
+            } catch (error) {
+                document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="6" class="text-danger">Error: ${error.message}</td></tr>`;
+            }
+        }
+        
+        // Update pagination controls
+        function updatePagination(pagination) {
+            const paginationElement = document.getElementById('historyPagination');
+            
+            if (pagination.pages <= 1) {
+                paginationElement.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            // Previous button
+            html += `
+                <li class="page-item ${pagination.page === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${pagination.page - 1}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
+            
+            // Page numbers
+            for (let i = 1; i <= pagination.pages; i++) {
+                if (
+                    i === 1 || // First page
+                    i === pagination.pages || // Last page
+                    (i >= pagination.page - 1 && i <= pagination.page + 1) // Pages around current page
+                ) {
+                    html += `
+                        <li class="page-item ${i === pagination.page ? 'active' : ''}">
+                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                } else if (
+                    (i === 2 && pagination.page > 3) || // Ellipsis after first page
+                    (i === pagination.pages - 1 && pagination.page < pagination.pages - 2) // Ellipsis before last page
+                ) {
+                    html += '<li class="page-item disabled"><a class="page-link" href="#">...</a></li>';
+                }
+            }
+            
+            // Next button
+            html += `
+                <li class="page-item ${pagination.page === pagination.pages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${pagination.page + 1}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
+            
+            paginationElement.innerHTML = html;
+            
+            // Add event listeners to the pagination links
+            document.querySelectorAll('#historyPagination .page-link').forEach(link => {
+                if (!link.parentElement.classList.contains('disabled') && link.dataset.page) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const sortBy = document.getElementById('sortBySelect').value;
+                        const sortOrder = document.getElementById('sortOrderSelect').value;
+                        fetchProbeHistory(parseInt(link.dataset.page), sortBy, sortOrder);
+                    });
+                }
+            });
+        }
+        
+        // Show job details modal
+        function showJobDetailsModal(job) {
+            document.getElementById('modalJobId').textContent = job.id;
+            document.getElementById('modalJobDate').textContent = new Date(job.created_at).toLocaleString();
+            document.getElementById('modalJobType').textContent = job.probe_type;
+            document.getElementById('modalJobTarget').textContent = job.target;
+            document.getElementById('modalJobStatus').innerHTML = `<span class="badge ${job.success ? 'bg-success' : 'bg-danger'}">${job.success ? 'Success' : 'Failed'}</span>`;
+            
+            try {
+                const parameters = job.parameters ? JSON.parse(job.parameters) : {};
+                document.getElementById('modalJobParameters').textContent = JSON.stringify(parameters, null, 2);
+            } catch (e) {
+                document.getElementById('modalJobParameters').textContent = job.parameters || 'No parameters';
+            }
+            
+            document.getElementById('modalJobResult').textContent = job.result || 'No result';
+            
+            // Configure run again button
+            const runAgainBtn = document.getElementById('modalRunAgainBtn');
+            runAgainBtn.onclick = async () => {
+                try {
+                    let parameters = {};
+                    try {
+                        parameters = JSON.parse(job.parameters);
+                    } catch (e) {
+                        // If parameters can't be parsed, use an empty object
+                    }
+                    
+                    await runProbe(job.probe_type, parameters);
+                    
+                    // Close the modal
+                    bootstrap.Modal.getInstance(document.getElementById('jobDetailsModal')).hide();
+                    
+                    // Switch to the probes tab
+                    document.getElementById('probes-tab').click();
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                }
+            };
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('jobDetailsModal'));
+            modal.show();
+        }
+        
+        // Refresh history button
+        document.getElementById('refreshHistoryBtn').addEventListener('click', () => {
+            const sortBy = document.getElementById('sortBySelect').value;
+            const sortOrder = document.getElementById('sortOrderSelect').value;
+            fetchProbeHistory(currentPage, sortBy, sortOrder);
+        });
+        
+        // Sort order change
+        document.getElementById('sortBySelect').addEventListener('change', () => {
+            const sortBy = document.getElementById('sortBySelect').value;
+            const sortOrder = document.getElementById('sortOrderSelect').value;
+            fetchProbeHistory(1, sortBy, sortOrder);
+        });
+        
+        document.getElementById('sortOrderSelect').addEventListener('change', () => {
+            const sortBy = document.getElementById('sortBySelect').value;
+            const sortOrder = document.getElementById('sortOrderSelect').value;
+            fetchProbeHistory(1, sortBy, sortOrder);
+        });
+        
+        // Initialize the app
+        updateAuthUI();
+    </script>
+</body>
+</html>
