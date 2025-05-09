@@ -489,10 +489,15 @@ def dns_probe():
         job = save_probe_job("dns", domain, parameters, result, success)
         
         response = format_response(success, "dns", domain, result, job.id if job else 0)
-        return jsonify(response)
+        response_json = jsonify(response)
+        # Ensure proper Content-Type header
+        response_json.headers['Content-Type'] = 'application/json'
+        return response_json
     except Exception as e:
         logger.exception(f"Error in DNS probe: {str(e)}")
-        return jsonify(format_response(False, "dns", domain, f"Error: {str(e)}")), 500
+        error_response = jsonify(format_response(False, "dns", domain, f"Error: {str(e)}"))
+        error_response.headers['Content-Type'] = 'application/json'
+        return error_response, 500
 
 
 @bp.route("/whois", methods=["GET", "POST"])
@@ -518,10 +523,15 @@ def whois_probe():
         job = save_probe_job("whois", domain, parameters, result, success)
         
         response = format_response(success, "whois", domain, result, job.id if job else 0)
-        return jsonify(response)
+        response_json = jsonify(response)
+        # Ensure proper Content-Type header
+        response_json.headers['Content-Type'] = 'application/json'
+        return response_json
     except Exception as e:
         logger.exception(f"Error in WHOIS probe: {str(e)}")
-        return jsonify(format_response(False, "whois", domain, f"Error: {str(e)}")), 500
+        error_response = jsonify(format_response(False, "whois", domain, f"Error: {str(e)}"))
+        error_response.headers['Content-Type'] = 'application/json'
+        return error_response, 500
 
 
 @bp.route("/history", methods=["GET"])
@@ -540,9 +550,12 @@ def probe_history():
     total = query.count()
     jobs = query.order_by(ProbeJob.created_at.desc()).limit(limit).offset(offset).all()
     
-    return jsonify({
+    response = jsonify({
         "total": total,
         "offset": offset,
         "limit": limit,
         "jobs": [job.to_dict() for job in jobs]
     })
+    # Ensure proper Content-Type header
+    response.headers['Content-Type'] = 'application/json'
+    return response
