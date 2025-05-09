@@ -43,19 +43,138 @@ app = Flask(__name__)
 cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else "*"
 logger.info(f"Configuring CORS with origins: {cors_origins}")
 
+# List of headers we want to allow
+cors_allow_headers = [
+    "Content-Type", "Authorization", "X-API-Key", "X-Requested-With",
+    "Accept", "Origin", "Access-Control-Request-Method", 
+    "Access-Control-Request-Headers", "ApiKey", "Api-Key", "api-key", "apikey"
+]
+
+# Headers we want to expose to the client
+cors_expose_headers = ["Content-Type", "Authorization", "X-API-Key"]
+
+# Main CORS configuration
 CORS(
     app,
     origins=cors_origins,
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Content-Type", "Authorization", "X-API-Key", "X-Requested-With",
-        "Accept", "Origin", "Access-Control-Request-Method", 
-        "Access-Control-Request-Headers", "ApiKey", "Api-Key"
-    ],
+    allow_headers=cors_allow_headers,
     supports_credentials=True,
-    expose_headers=["Content-Type", "Authorization", "X-API-Key"],
+    expose_headers=cors_expose_headers,
     max_age=3600
 )
+
+# Request logger for debugging API calls
+@app.before_request
+def log_request_info():
+    """Log detailed information about incoming requests"""
+    # Only log API requests, not static content
+    if not request.path.startswith('/static/'):
+        # Create a request ID for tracking
+        request_id = str(uuid.uuid4())[:8]
+        g.request_id = request_id
+        
+        # Extract authentication info for logging (without sensitive data)
+        auth_info = "No Auth"
+        if request.headers.get('Authorization'):
+            if request.headers.get('Authorization').startswith('Bearer '):
+                auth_info = "JWT Token"
+            elif request.headers.get('Authorization').startswith('ApiKey '):
+                auth_info = "API Key"
+        elif any(k.lower() in ('x-api-key', 'api-key', 'apikey') for k in request.headers.keys()):
+            auth_info = "API Key Header"
+            
+        # Get client IP with proxy support
+        client_ip = request.remote_addr
+        if request.headers.get('X-Forwarded-For'):
+            client_ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+            
+        # Log request details
+        logger.info(f"[{request_id}] Request: {request.method} {request.path} - IP: {client_ip}, "
+                   f"Auth: {auth_info}, Content-Type: {request.content_type}, "
+                   f"User-Agent: {request.headers.get('User-Agent')}")
+        
+        # For debugging, log more details at debug level
+        if logger.isEnabledFor(logging.DEBUG):
+            # Log headers (redact sensitive info)
+            headers = dict(request.headers)
+            if 'Authorization' in headers:
+                headers['Authorization'] = '[REDACTED]'
+            if 'X-API-Key' in headers:
+                headers['X-API-Key'] = '[REDACTED]'
+                
+            # Log query parameters
+            logger.debug(f"[{request_id}] Query params: {dict(request.args)}")
+            
+            # Log request body for JSON requests (redact sensitive info)
+            if request.is_json:
+                body = request.get_json(silent=True)
+                if body:
+                    if isinstance(body, dict):
+                        # Redact sensitive fields
+                        safe_body = body.copy()
+                        for field in ['password', 'token', 'api_key', 'key', 'secret']:
+                            if field in safe_body:
+                                safe_body[field] = '[REDACTED]'
+                        logger.debug(f"[{request_id}] JSON body: {safe_body}")
+                    else:
+                        logger.debug(f"[{request_id}] JSON body: (non-dict payload)")
+
+# After request handler to ensure CORS headers are set on all responses
+@app.after_request
+def add_cors_headers(response):
+    """Ensure CORS headers are consistently applied to all responses"""
+    # If origin is "*", let Flask-CORS handle it
+    if cors_origins == "*":
+        pass  # Let Flask-CORS handle wildcard case
+    else:
+        # For explicit origins, set the appropriate headers
+        origin = request.headers.get('Origin')
+        if origin and (origin in cors_origins or origin.strip('/') in cors_origins):
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', ', '.join(cors_allow_headers))
+            response.headers.add('Access-Control-Expose-Headers', ', '.join(cors_expose_headers))
+    
+    # Add a diagnostic header to help with debugging
+    response.headers.add('X-ProbeOps-API', 'v1.0')
+    
+    # Add request ID for tracking in response headers if available
+    if hasattr(g, 'request_id'):
+        response.headers.add('X-Request-ID', g.request_id)
+    
+    # Log response details
+    status_category = response.status_code // 100
+    log_method = logger.info if status_category in (1, 2, 3) else logger.warning if status_category == 4 else logger.error
+    
+    request_id = getattr(g, 'request_id', 'no-id') 
+    
+    # Log different levels based on status code
+    if status_category >= 4:  # 4xx or 5xx errors
+        # For errors, log more detailed information to help diagnose issues
+        log_method(f"[{request_id}] Response: {response.status_code} {request.method} {request.path} - "
+                  f"Size: {response.content_length or 0} bytes, "
+                  f"Content-Type: {response.content_type}")
+        
+        # For server errors, include response body in logs for debugging
+        if status_category == 5 and response.content_type == 'application/json':
+            try:
+                # Try to get the JSON data if possible
+                json_data = response.get_json(silent=True)
+                if json_data:
+                    logger.error(f"[{request_id}] Error response body: {json_data}")
+            except Exception:
+                pass
+    else:
+        # For successful responses, log basic information
+        log_method(f"[{request_id}] Response: {response.status_code} {request.method} {request.path}")
+    
+    # Debug level for more detailed information about all responses
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"[{request_id}] Response headers: {dict(response.headers)}")
+        
+    return response
 
 # Define a custom rate limit key function that uses user identity when available
 def get_rate_limit_key():
@@ -342,7 +461,38 @@ def login_required(f):
                 "error": "Authentication required", 
                 "message": "Please provide a valid JWT token or API key."
             }), 401
-        return f(*args, **kwargs)
+        
+        try:
+            # Call the original function
+            response = f(*args, **kwargs)
+            
+            # Ensure the response is properly formatted as JSON
+            if not isinstance(response, tuple):
+                # If it's not a tuple, it's just the response body
+                if not isinstance(response, dict) and not hasattr(response, 'get_json'):
+                    # Not a json response, convert it
+                    return jsonify({"data": str(response)}), 200
+                return response
+            else:
+                # It's a tuple with (response, status_code)
+                body, status_code = response[0], response[1]
+                # If response body is not already jsonified
+                if not hasattr(body, 'get_json'):
+                    if not isinstance(body, dict):
+                        # Convert non-dict to JSON
+                        return jsonify({"data": str(body)}), status_code
+                    # Convert dict to JSON
+                    return jsonify(body), status_code
+                return response
+        except Exception as e:
+            # Log the error
+            logger.error(f"Error in protected route: {str(e)}")
+            # Return a JSON error response
+            return jsonify({
+                "error": "Server error",
+                "message": str(e)
+            }), 500
+            
     return decorated
 
 
@@ -361,7 +511,38 @@ def admin_required(f):
                 "error": "Forbidden", 
                 "message": "Admin privileges required."
             }), 403
-        return f(*args, **kwargs)
+        
+        try:
+            # Call the original function
+            response = f(*args, **kwargs)
+            
+            # Ensure the response is properly formatted as JSON
+            if not isinstance(response, tuple):
+                # If it's not a tuple, it's just the response body
+                if not isinstance(response, dict) and not hasattr(response, 'get_json'):
+                    # Not a json response, convert it
+                    return jsonify({"data": str(response)}), 200
+                return response
+            else:
+                # It's a tuple with (response, status_code)
+                body, status_code = response[0], response[1]
+                # If response body is not already jsonified
+                if not hasattr(body, 'get_json'):
+                    if not isinstance(body, dict):
+                        # Convert non-dict to JSON
+                        return jsonify({"data": str(body)}), status_code
+                    # Convert dict to JSON
+                    return jsonify(body), status_code
+                return response
+        except Exception as e:
+            # Log the error
+            logger.error(f"Error in admin route: {str(e)}")
+            # Return a JSON error response
+            return jsonify({
+                "error": "Server error",
+                "message": str(e)
+            }), 500
+            
     return decorated
 
 
@@ -1258,15 +1439,23 @@ def handle_json_error():
         
         try:
             # Force JSON parsing if it hasn't already been parsed
-            if not request.is_json:
-                # This will raise an exception if the JSON is invalid
-                _ = request.get_json(force=True)
+            _ = request.get_json(force=True)
         except Exception as e:
             logger.error(f"JSON parsing error: {str(e)}")
             return jsonify({
                 "error": "Invalid JSON",
                 "message": "The request body contains invalid JSON."
             }), 400
+
+
+@app.errorhandler(400)
+def bad_request_error(error):
+    """Handle 400 errors uniformly"""
+    logger.error(f"Bad Request error: {str(error)}")
+    return jsonify({
+        "error": "Bad Request",
+        "message": "The request could not be processed. Please check your JSON format."
+    }), 400
 
 
 # Admin routes for server management
