@@ -165,7 +165,11 @@ The system uses the following main database models:
   - `.env.template`: Development environment template
   - `.env.backend.template`: Production environment template
 - `start.sh`: Startup script with auto-scaling and database initialization
-- `deployment.md`: Detailed deployment guide with troubleshooting
+- Documentation:
+  - `deployment.md`: Detailed deployment guide with troubleshooting
+  - `docs/DEPLOYMENT_AWS.md`: AWS-specific deployment instructions
+  - `docs/DOCKER_CONFIGURATION.md`: Docker configuration explanation
+  - `docs/START_SCRIPT.md`: Startup script features and options
 
 ## Performance Tuning
 
