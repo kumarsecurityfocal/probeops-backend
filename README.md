@@ -118,9 +118,13 @@ When connecting a frontend application to this API:
 The API is configured with comprehensive CORS support to allow direct frontend integration:
 
 ```python
+# Configure CORS to allow requests from specified origins or all origins as fallback
+cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else "*"
+logger.info(f"Configuring CORS with origins: {cors_origins}")
+
 CORS(
     app,
-    origins="*",  # Allow all origins
+    origins=cors_origins,
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=[
         "Content-Type", "Authorization", "X-API-Key", "X-Requested-With",
@@ -134,11 +138,17 @@ CORS(
 ```
 
 Key CORS Features:
-- **Universal Access**: All origins are allowed for development and testing
+- **Configurable Origins**: Specify allowed origins via CORS_ORIGINS environment variable (comma-separated)
+- **Fallback Mode**: Falls back to allowing all origins ("*") if CORS_ORIGINS is not defined
 - **Credential Support**: Authentication works cross-origin
 - **Header Flexibility**: Supports multiple API key header formats
 - **Preflight Caching**: OPTIONS requests are cached for better performance
 - **Comprehensive Methods**: All required HTTP methods are supported
+
+In production, you should explicitly set allowed origins in `.env.backend`:
+```
+CORS_ORIGINS=http://35.173.110.195:3000,http://localhost:3000
+```
 
 ## Development
 

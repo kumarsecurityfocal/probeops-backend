@@ -39,10 +39,13 @@ logger = logging.getLogger(__name__)
 # Create the Flask application
 app = Flask(__name__)
 
-# Configure CORS to allow requests from any origin
+# Configure CORS to allow requests from specified origins or all origins as fallback
+cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else "*"
+logger.info(f"Configuring CORS with origins: {cors_origins}")
+
 CORS(
     app,
-    origins="*",
+    origins=cors_origins,
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=[
         "Content-Type", "Authorization", "X-API-Key", "X-Requested-With",
