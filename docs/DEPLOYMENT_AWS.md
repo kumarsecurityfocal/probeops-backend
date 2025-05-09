@@ -31,7 +31,7 @@ In the .env.backend file, configure:
 - **Environment**: Set ENVIRONMENT=production
 - **Log levels**: Set LOG_LEVEL=INFO for production (or WARNING for less verbose logs)
 
-Example .env.prod for RDS:
+Example .env.backend for RDS:
 ```
 # API Configuration
 API_PORT=5000
@@ -75,7 +75,7 @@ KEEPALIVE=5
 
 1. Create a PostgreSQL RDS instance in AWS
 2. Configure security groups to allow your EC2 instance to connect to RDS
-3. Update your .env.prod file with the RDS endpoint:
+3. Update your .env.backend file with the RDS endpoint:
    ```
    DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@your-rds-endpoint.rds.amazonaws.com:5432/${POSTGRES_DB}
    ```
@@ -178,10 +178,11 @@ server {
 ### 6. Scaling Options
 
 For higher traffic, you can:
-- Increase WORKERS in .env.prod (e.g., set to number of CPU cores + 1)
+- Increase WORKERS in .env.backend (the start.sh script will automatically calculate optimal value based on CPU cores)
 - Adjust DB_POOL_SIZE based on expected concurrent connections
 - Consider running multiple instances behind a load balancer
 - Use Auto Scaling groups in AWS
+- Enable MAX_REQUESTS and MAX_REQUESTS_JITTER settings to prevent memory leaks
 
 ### 7. Maintenance
 
