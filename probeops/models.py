@@ -68,15 +68,15 @@ class User(db.Model):
             return False
         
         # Add detailed logging for easier debugging
-        logger.debug(f"Verifying password for user {self.username}")
-        logger.debug(f"Password hash type: {self.hashed_password[:20]}")
-        logger.debug(f"Actual input password: {password[:3]}***{password[-2:] if len(password) > 2 else ''}")
+        logger.info(f"Verifying password for user {self.username}")
+        logger.info(f"Password hash type: {self.hashed_password[:20]}")
+        logger.info(f"Actual input password: {password[:3]}***{password[-2:] if len(password) > 2 else ''}")
             
         try:
             # For werkzeug's standard formats (pbkdf2, scrypt)
             if self.hashed_password.startswith(('pbkdf2:', 'scrypt:')):
                 verified = check_password_hash(self.hashed_password, password)
-                logger.debug(f"Werkzeug verification result: {verified}")
+                logger.info(f"Werkzeug verification result: {verified}")
                 return verified
                 
             # For bcrypt hashes
