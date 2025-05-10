@@ -124,8 +124,8 @@ def admin_required(f):
                 "message": "Please provide a valid JWT token or API key."
             }), 401
         
-        # Check both legacy is_admin flag and new role field
-        if not current_user.is_admin and current_user.role != User.ROLE_ADMIN:
+        # Check if user is admin using is_admin_user method
+        if not current_user.is_admin_user():
             return jsonify({
                 "error": "Forbidden", 
                 "message": "Admin privileges required."

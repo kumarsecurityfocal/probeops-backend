@@ -118,20 +118,20 @@ class User(Model):
         """Convert to dictionary for API responses"""
         # Need to convert relationship to a list first, then get its length
         api_keys_list = list(self.api_keys)
-        # Use is_admin directly
+        # Create base dict with direct attributes
         user_dict = {
             'id': self.id,
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin,  # Use the field directly
+            'role': self.role,
             'subscription_tier': self.subscription_tier,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'api_key_count': len(api_keys_list)
         }
         
-        # Add a role field based on is_admin for backwards compatibility
-        user_dict['role'] = self.ROLE_ADMIN if self.is_admin else self.ROLE_USER
+        # Add is_admin field based on role for backwards compatibility
+        user_dict['is_admin'] = self.is_admin_user()
         
         return user_dict
     

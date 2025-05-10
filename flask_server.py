@@ -727,11 +727,9 @@ def role_required(role):
                 }), 401
             
             # Check if user has the required role
-            # In production schema, we only have is_admin, not role
-            # So we map admin role to is_admin=True, and user role to is_admin=False
             has_required_role = False
             if role == User.ROLE_ADMIN:
-                has_required_role = current_user.is_admin
+                has_required_role = current_user.is_admin_user()
             elif role == User.ROLE_USER:
                 has_required_role = True  # All authenticated users have the user role
                 
