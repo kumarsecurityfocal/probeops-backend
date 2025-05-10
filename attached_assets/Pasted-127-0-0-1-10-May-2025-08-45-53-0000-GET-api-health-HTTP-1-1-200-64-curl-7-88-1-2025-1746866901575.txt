@@ -1,0 +1,118 @@
+127.0.0.1 - - [10/May/2025:08:45:53 +0000] "GET /api/health HTTP/1.1" 200 64 "-" "curl/7.88.1"
+2025-05-10 08:46:23,790 - flask_server - INFO - [95cfb1a2] Request: GET /api/health - IP: 127.0.0.1, Auth: No Auth, Content-Type: None, User-Agent: curl/7.88.1
+2025-05-10 08:46:23,791 - flask_server - DEBUG - [95cfb1a2] Query params: {}
+2025-05-10 08:46:23,791 - flask_server - DEBUG - Authorization header: None
+2025-05-10 08:46:23,791 - flask_server - DEBUG - Headers received: {'Host': 'localhost:5000', 'User-Agent': 'curl/7.88.1', 'Accept': '*/*'}
+2025-05-10 08:46:23,792 - flask_server - INFO - [95cfb1a2] Response: 200 GET /api/health
+2025-05-10 08:46:23,792 - flask_server - DEBUG - [95cfb1a2] Response headers: {'Content-Type': 'application/json', 'Content-Length': '64', 'X-ProbeOps-API': 'v1.0', 'X-Request-ID': '95cfb1a2'}
+127.0.0.1 - - [10/May/2025:08:46:23 +0000] "GET /api/health HTTP/1.1" 200 64 "-" "curl/7.88.1"
+2025-05-10 08:46:37,861 - flask_server - INFO - [e439f04f] Request: POST /api/users/login - IP: 223.185.129.32, Auth: No Auth, Content-Type: application/json, User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36
+2025-05-10 08:46:37,861 - flask_server - DEBUG - [e439f04f] Query params: {}
+2025-05-10 08:46:37,862 - flask_server - DEBUG - [e439f04f] JSON body: {'email': 'admin@probeops.com', 'password': '[REDACTED]'}
+2025-05-10 08:46:37,862 - flask_server - DEBUG - Authorization header: None
+2025-05-10 08:46:37,862 - flask_server - DEBUG - Headers received: {'Host': 'probeops.com', 'X-Forwarded-Scheme': 'https', 'X-Forwarded-Proto': 'https', 'X-Forwarded-For': '223.185.129.32', 'X-Real-Ip': '223.185.129.32', 'Connection': 'keep-alive', 'Content-Length': '54', 'Sec-Ch-Ua-Platform': '"Windows"', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36', 'Accept': 'application/json', 'Sec-Ch-Ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"', 'Content-Type': 'application/json', 'Sec-Ch-Ua-Mobile': '?0', 'Origin': 'https://probeops.com', 'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Referer': 'https://probeops.com/auth', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-US,en;q=0.9'}
+[2025-05-10 08:46:37 +0000] [13] [ERROR] Error handling request /api/users/login
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column users.is_admin does not exist
+LINE 1: ...hed_password, users.is_active AS users_is_active, users.is_a...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask_cors/extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask_cors/extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/flask_server.py", line 1250, in proxy_login
+    return login()
+           ^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/flask_limiter/extension.py", line 1314, in __inner
+    return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/flask_server.py", line 1463, in login
+    user = User.query.filter_by(email=data["email"]).first()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column users.is_admin does not exist
+LINE 1: ...hed_password, users.is_active AS users_is_active, users.is_a...
+                                                             ^
+
+[SQL: SELECT users.id AS users_id, users.username AS users_username, users.email AS users_email, users.hashed_password AS users_hashed_password, users.is_active AS users_is_active, users.is_admin AS users_is_admin, users.subscription_tier AS users_subscription_tier, users.created_at AS users_created_at
+FROM users
+WHERE users.email = %(email_1)s
+ LIMIT %(param_1)s]
+[parameters: {'email_1': 'admin@probeops.com', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+172.18.0.2 - - [10/May/2025:08:46:37 +0000] "POST /api/users/login HTTP/1.1" 500 0 "-" "-"
+2025-05-10 08:46:53,866 - flask_server - INFO - [b53dfd2b] Request: GET /api/health - IP: 127.0.0.1, Auth: No Auth, Content-Type: None, User-Agent: curl/7.88.1
+2025-05-10 08:46:53,866 - flask_server - DEBUG - [b53dfd2b] Query params: {}
+2025-05-10 08:46:53,866 - flask_server - DEBUG - Authorization header: None
+2025-05-10 08:46:53,866 - flask_server - DEBUG - Headers received: {'Host': 'localhost:5000', 'User-Agent': 'curl/7.88.1', 'Accept': '*/*'}
+2025-05-10 08:46:53,867 - flask_server - INFO - [b53dfd2b] Response: 200 GET /api/health
+2025-05-10 08:46:53,867 - flask_server - DEBUG - [b53dfd2b] Response headers: {'Content-Type': 'application/json', 'Content-Length': '64', 'X-ProbeOps-API': 'v1.0', 'X-Request-ID': 'b53dfd2b'}
+127.0.0.1 - - [10/May/2025:08:46:53 +0000] "GET /api/health HTTP/1.1" 200 64 "-" "curl/7.88.1"

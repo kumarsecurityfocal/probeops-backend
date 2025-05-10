@@ -337,16 +337,14 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     hashed_password = db.Column(db.String(256), nullable=False) # Primary password field
     is_active = db.Column(db.Boolean, default=True)
-    # Production DB has is_admin column but development uses role
-    is_admin = db.Column(db.Boolean, default=False)  # For production environment
-    # role column is not included - it doesn't exist in production
+    # Actually, production uses role not is_admin
+    role = db.Column(db.String(20), default=ROLE_USER)
     subscription_tier = db.Column(db.String(20), default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def is_admin_user(self):
-        """Check if user has admin role - works with both schema versions"""
-        # Use is_admin directly since that's what production has
-        return self.is_admin
+        """Check if user has admin role"""
+        return self.role == self.ROLE_ADMIN
         
     def has_tier(self, tier):
         """Check if user has a specific subscription tier or higher"""
@@ -408,14 +406,14 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin,  # Use the field directly
+            'role': self.role,
             'subscription_tier': self.subscription_tier,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'api_key_count': len(api_keys_list)
         }
         
-        # Add a role field based on is_admin for backwards compatibility
-        user_dict['role'] = self.ROLE_ADMIN if self.is_admin else self.ROLE_USER
+        # Add is_admin field based on role for backwards compatibility
+        user_dict['is_admin'] = self.is_admin_user()
         
         return user_dict
     
@@ -563,11 +561,14 @@ def get_current_user():
 
 def create_jwt_token(user):
     """Create a new JWT token for the user"""
+    # Create role based on is_admin for backward compatibility
+    role = User.ROLE_ADMIN if user.is_admin else User.ROLE_USER
+    
     payload = {
         "sub": str(user.id),  # Convert ID to string for JWT
         "username": user.username,
         "email": user.email,
-        "role": user.role,
+        "role": role,  # Derived from is_admin
         "subscription_tier": user.subscription_tier,
         "exp": datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION),
         "iat": datetime.utcnow()
@@ -672,9 +673,8 @@ def admin_required(f):
                 "message": "Please provide a valid JWT token or API key."
             }), 401
         
-        # Check for admin using the is_admin field (for backward compatibility)
-        # or the new role field (for RBAC)
-        if not current_user.is_admin and current_user.role != User.ROLE_ADMIN:
+        # Check for admin using the is_admin field (production compatible)
+        if not current_user.is_admin:
             return jsonify({
                 "error": "Forbidden", 
                 "message": "Admin privileges required."
@@ -727,7 +727,15 @@ def role_required(role):
                 }), 401
             
             # Check if user has the required role
-            if current_user.role != role:
+            # In production schema, we only have is_admin, not role
+            # So we map admin role to is_admin=True, and user role to is_admin=False
+            has_required_role = False
+            if role == User.ROLE_ADMIN:
+                has_required_role = current_user.is_admin
+            elif role == User.ROLE_USER:
+                has_required_role = True  # All authenticated users have the user role
+                
+            if not has_required_role:
                 return jsonify({
                     "error": "Forbidden", 
                     "message": f"Role '{role}' required."
