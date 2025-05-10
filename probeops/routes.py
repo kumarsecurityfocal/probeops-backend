@@ -2,7 +2,7 @@
 API routes for ProbeOps API
 """
 import logging
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -80,8 +80,47 @@ def register_auth_routes(bp):
     @bp.route('/login', methods=['POST'])
     def login():
         """Login and get JWT token"""
-        # To be implemented
-        return jsonify({"message": "Login endpoint"}), 501
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        # Check required fields
+        if "email" not in data and "username" not in data:
+            return jsonify({"error": "Either email or username is required"}), 400
+        if "password" not in data:
+            return jsonify({"error": "Password is required"}), 400
+        
+        # Get user by email or username
+        user = None
+        if "email" in data:
+            user = User.query.filter_by(email=data["email"]).first()
+        else:
+            user = User.query.filter_by(username=data["username"]).first()
+        
+        # Check if user exists and password is correct
+        if not user or not user.verify_password(data["password"]):
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        # Check if user is active
+        if not user.is_active:
+            return jsonify({"error": "Account is inactive"}), 403
+        
+        # Generate JWT token
+        token = create_jwt_token(user)
+        
+        # Return token and user info
+        return jsonify({
+            "token": token,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,
+                "subscription_tier": user.subscription_tier
+            },
+            "message": "Login successful"
+        }), 200
     
     @bp.route('/me', methods=['GET'])
     @login_required

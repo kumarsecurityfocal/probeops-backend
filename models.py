@@ -54,6 +54,8 @@ class User(Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     hashed_password = db.Column(db.String(256), nullable=False)
+    # Legacy compatibility field
+    password_hash = db.Column(db.String(256), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     # Production uses role column
     role = db.Column(db.String(20), default=ROLE_USER)
