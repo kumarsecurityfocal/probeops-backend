@@ -92,12 +92,30 @@ class User(Model):
     
     def verify_password(self, password):
         """Check if password matches"""
-        # Try to verify using hashed_password (bcrypt format)
-        if self.hashed_password and self.hashed_password.startswith('$2b$'):
-            return bcrypt_sha256.verify(password, self.hashed_password)
-        # Fall back to password_hash for compatibility
+        # For bcrypt format (used in production)
+        if self.hashed_password:
+            # Check if it's a bcrypt hash
+            if self.hashed_password.startswith('$2b$'):
+                try:
+                    return bcrypt_sha256.verify(password, self.hashed_password)
+                except Exception:
+                    # If verification fails, continue to other methods
+                    pass
+            # Check if it's a werkzeug hash
+            else:
+                try:
+                    return check_password_hash(self.hashed_password, password)
+                except Exception:
+                    # If verification fails, continue to other methods
+                    pass
+        
+        # Fall back to password_hash column for compatibility
         if hasattr(self, 'password_hash') and self.password_hash:
-            return check_password_hash(self.password_hash, password)
+            try:
+                return check_password_hash(self.password_hash, password)
+            except Exception:
+                pass
+                
         return False
     
     def is_admin_user(self):
