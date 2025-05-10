@@ -143,35 +143,53 @@ def create_app():
             logger.info("Default rate limit configurations created")
         
         # Setup test users if they don't exist
-        if User.query.filter_by(email='admin@probeops.com').first() is None:
-            logger.info("Creating default test users for API testing")
+        try:
+            # Check if we need to create any test users
+            users_to_create = []
             
-            # Create admin user
-            admin = User(
-                username='admin',
-                email='admin@probeops.com',
-                role=User.ROLE_ADMIN,
-                subscription_tier=User.TIER_ENTERPRISE,
-                is_active=True,
-                created_at=datetime.utcnow()
-            )
-            admin.password = 'testpass123'  # This will set both password fields correctly
-            db.session.add(admin)
+            # Check for admin user
+            admin = User.query.filter_by(username='admin').first()
+            if admin is None:
+                logger.info("Creating default admin user for API testing")
+                admin = User(
+                    username='admin',
+                    email='admin@probeops.com',
+                    role=User.ROLE_ADMIN,
+                    subscription_tier=User.TIER_ENTERPRISE,
+                    is_active=True,
+                    created_at=datetime.utcnow()
+                )
+                admin.password = 'testpass123'  # This will set both password fields correctly
+                users_to_create.append(admin)
             
-            # Create a standard user as well
-            standard_user = User(
-                username='standard',
-                email='standard@probeops.com',
-                role=User.ROLE_USER,
-                subscription_tier=User.TIER_STANDARD,
-                is_active=True,
-                created_at=datetime.utcnow()
-            )
-            standard_user.password = 'testpass123'
-            db.session.add(standard_user)
+            # Check for standard user
+            standard_user = User.query.filter_by(username='standard').first()
+            if standard_user is None:
+                logger.info("Creating default standard user for API testing")
+                standard_user = User(
+                    username='standard',
+                    email='standard@probeops.com',
+                    role=User.ROLE_USER,
+                    subscription_tier=User.TIER_STANDARD,
+                    is_active=True,
+                    created_at=datetime.utcnow()
+                )
+                standard_user.password = 'testpass123'
+                users_to_create.append(standard_user)
             
-            db.session.commit()
-            logger.info("Test users created successfully")
+            # Add any new users that need to be created
+            if users_to_create:
+                for user in users_to_create:
+                    db.session.add(user)
+                db.session.commit()
+                logger.info(f"Successfully created {len(users_to_create)} test users")
+            else:
+                logger.info("No test users needed to be created, they already exist")
+                
+        except Exception as e:
+            db.session.rollback()
+            logger.warning(f"Error creating test users: {str(e)}")
+            # Continue application startup even if user creation fails
         
         logger.info("Database tables created successfully")
     

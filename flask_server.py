@@ -1216,9 +1216,14 @@ def setup_database():
         db.create_all()
         logger.info("Database tables created successfully")
         
-        # Create default admin user if it doesn't exist
+        # Check for users that need to be created
+        users_to_create = []
+        api_keys_to_create = []
+        
+        # Check for admin user
         admin = User.query.filter_by(username="admin").first()
         if not admin:
+            logger.info("Creating admin user")
             admin = User(
                 username="admin",
                 email="admin@probeops.com",
@@ -1227,28 +1232,51 @@ def setup_database():
                 subscription_tier=User.TIER_ENTERPRISE  # Default to highest tier for admin
             )
             admin.password = "administrator"  # This will be hashed
-            db.session.add(admin)
+            users_to_create.append(admin)
             
-            # Create an API key for the admin
+            # Prepare API key for the admin
             api_key = ApiKey(
                 user=admin,
                 key=ApiKey.generate_key(),
                 description="Default admin API key"
             )
-            db.session.add(api_key)
-            
-            db.session.commit()
-            logger.info(f"Created default admin user with API key: {api_key.key}")
+            api_keys_to_create.append(api_key)
         else:
             # Update existing admin user to ensure they have admin role and enterprise tier
-            if not admin.is_admin_user() or admin.subscription_tier != User.TIER_ENTERPRISE:
+            admin_updated = False
+            if not admin.is_admin_user():
                 admin.role = User.ROLE_ADMIN
+                admin_updated = True
+            if admin.subscription_tier != User.TIER_ENTERPRISE:
                 admin.subscription_tier = User.TIER_ENTERPRISE
-                db.session.commit()
+                admin_updated = True
+            
+            if admin_updated:
                 logger.info("Updated existing admin user with correct role and tier")
+        
+        # Save any new or updated users
+        if users_to_create:
+            for user in users_to_create:
+                db.session.add(user)
+            
+            # First commit users to get their IDs
+            db.session.commit()
+            logger.info(f"Created {len(users_to_create)} new users")
+            
+            # Now add and commit API keys
+            if api_keys_to_create:
+                for api_key in api_keys_to_create:
+                    db.session.add(api_key)
+                db.session.commit()
+                logger.info(f"Created API keys for new users")
+        elif admin_updated:
+            # Commit any updates to existing users
+            db.session.commit()
+            
     except Exception as e:
         logger.error(f"Error setting up database: {str(e)}")
         db.session.rollback()
+        logger.warning("Continuing application startup despite database setup error")
 
 # Set up database after app initialization
 with app.app_context():
