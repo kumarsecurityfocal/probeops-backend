@@ -1,0 +1,780 @@
+{
+	"info": {
+		"_postman_id": "63e84d9d-4b5e-47b0-950e-b621f9b2b4a1",
+		"name": "ProbeOps API",
+		"description": "A collection of requests for testing the ProbeOps API, including authentication, network probes, and admin functionality.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"health"
+					]
+				},
+				"description": "Verify that the API is running properly."
+			},
+			"response": []
+		},
+		{
+			"name": "API Root",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api"
+					]
+				},
+				"description": "Get information about the API, including available endpoints."
+			},
+			"response": []
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"test@example.com\",\n    \"password\": \"securepassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"register"
+							]
+						},
+						"description": "Register a new user in the system."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    console.log(\"Token saved to environment\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@probeops.com\",\n    \"password\": \"testpass123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"login"
+							]
+						},
+						"description": "Login with email and password to get JWT token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"me"
+							]
+						},
+						"description": "Get information about the currently logged in user."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for user registration, login, and account management."
+		},
+		{
+			"name": "API Keys",
+			"item": [
+				{
+					"name": "List API Keys",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/apikeys",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"apikeys"
+							]
+						},
+						"description": "List all API keys for the current user."
+					},
+					"response": []
+				},
+				{
+					"name": "Create API Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.api_key && jsonData.api_key.key) {",
+									"    pm.environment.set(\"api_key\", jsonData.api_key.key);",
+									"    pm.environment.set(\"api_key_id\", jsonData.api_key.id);",
+									"    console.log(\"API Key saved to environment\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Test API Key\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/apikeys",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"apikeys"
+							]
+						},
+						"description": "Create a new API key."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete API Key",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/apikeys/{{api_key_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"apikeys",
+								"{{api_key_id}}"
+							]
+						},
+						"description": "Delete an API key."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing API keys."
+		},
+		{
+			"name": "Network Probes (JWT Auth)",
+			"item": [
+				{
+					"name": "Ping Probe",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"host\": \"google.com\",\n    \"count\": 4\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/ping",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"ping"
+							]
+						},
+						"description": "Run ping on a target host using JWT authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Traceroute Probe",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"host\": \"github.com\",\n    \"max_hops\": 15\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/traceroute",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"traceroute"
+							]
+						},
+						"description": "Run traceroute on a target host using JWT authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "DNS Lookup",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"domain\": \"example.com\",\n    \"record_type\": \"A\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/dns",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"dns"
+							]
+						},
+						"description": "Run DNS lookup on a domain using JWT authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "WHOIS Lookup",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"domain\": \"github.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/whois",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"whois"
+							]
+						},
+						"description": "Run WHOIS lookup on a domain using JWT authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Probe History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/probes/history?limit=10&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"history"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Get probe job history for the current user."
+					},
+					"response": []
+				}
+			],
+			"description": "Network probe endpoints using JWT authentication."
+		},
+		{
+			"name": "Network Probes (API Key Auth)",
+			"item": [
+				{
+					"name": "Ping Probe",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"host\": \"google.com\",\n    \"count\": 4\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/ping",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"ping"
+							]
+						},
+						"description": "Run ping on a target host using API key authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Traceroute Probe",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"host\": \"github.com\",\n    \"max_hops\": 15\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/traceroute",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"traceroute"
+							]
+						},
+						"description": "Run traceroute on a target host using API key authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "DNS Lookup",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"domain\": \"example.com\",\n    \"record_type\": \"A\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/dns",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"dns"
+							]
+						},
+						"description": "Run DNS lookup on a domain using API key authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "WHOIS Lookup",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-Key",
+								"value": "{{api_key}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"domain\": \"github.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/probes/whois",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"probes",
+								"whois"
+							]
+						},
+						"description": "Run WHOIS lookup on a domain using API key authentication."
+					},
+					"response": []
+				}
+			],
+			"description": "Network probe endpoints using API key authentication."
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "List All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users"
+							]
+						},
+						"description": "List all users (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/2",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"2"
+							]
+						},
+						"description": "Get details for a specific user (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/3/role",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"3",
+								"role"
+							]
+						},
+						"description": "Update a user's role (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Subscription Tier",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"subscription_tier\": \"Enterprise\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/3/tier",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"3",
+								"tier"
+							]
+						},
+						"description": "Update a user's subscription tier (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle User Active Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"is_active\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/3/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"3",
+								"status"
+							]
+						},
+						"description": "Toggle a user's active status (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Server Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"status"
+							]
+						},
+						"description": "Get server status information (admin only)."
+					},
+					"response": []
+				}
+			],
+			"description": "Admin-only endpoints for user management and system status."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string",
+			"description": "Base URL for the API"
+		}
+	]
+}
