@@ -337,15 +337,16 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     hashed_password = db.Column(db.String(256), nullable=False) # Primary password field
     is_active = db.Column(db.Boolean, default=True)
-    # is_admin field removed as it doesn't exist in production DB
-    # Using role field instead for admin determination
-    role = db.Column(db.String(20), default=ROLE_USER)
+    # Production DB has is_admin column but development uses role
+    is_admin = db.Column(db.Boolean, default=False)  # For production environment
+    # role column is not included - it doesn't exist in production
     subscription_tier = db.Column(db.String(20), default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def is_admin_user(self):
-        """Check if user has admin role"""
-        return self.role == self.ROLE_ADMIN
+        """Check if user has admin role - works with both schema versions"""
+        # Use is_admin directly since that's what production has
+        return self.is_admin
         
     def has_tier(self, tier):
         """Check if user has a specific subscription tier or higher"""

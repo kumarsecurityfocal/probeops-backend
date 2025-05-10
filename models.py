@@ -55,8 +55,9 @@ class User(Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     hashed_password = db.Column(db.String(256), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    # Don't include is_admin field in SQLAlchemy model to avoid conflicts
-    role = db.Column(db.String(20), default=ROLE_USER)
+    # Production DB has is_admin column but development uses role
+    is_admin = db.Column(db.Boolean, default=False)  # For production environment
+    # role column is not included - it doesn't exist in production
     subscription_tier = db.Column(db.String(20), default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -98,8 +99,9 @@ class User(Model):
         return False
     
     def is_admin_user(self):
-        """Check if user has admin role"""
-        return self.role == self.ROLE_ADMIN
+        """Check if user has admin role - works with both schema versions"""
+        # Use is_admin directly since that's what production has
+        return self.is_admin
     
     def has_tier(self, tier):
         """Check if user has a specific subscription tier or higher"""
@@ -118,18 +120,22 @@ class User(Model):
         """Convert to dictionary for API responses"""
         # Need to convert relationship to a list first, then get its length
         api_keys_list = list(self.api_keys)
-        # Use is_admin_user() method for the is_admin field
-        return {
+        # Use is_admin directly
+        user_dict = {
             'id': self.id,
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin_user(),  # Use the method instead of the field
-            'role': self.role,
+            'is_admin': self.is_admin,  # Use the field directly
             'subscription_tier': self.subscription_tier,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'api_key_count': len(api_keys_list)
         }
+        
+        # Add a role field based on is_admin for backwards compatibility
+        user_dict['role'] = self.ROLE_ADMIN if self.is_admin else self.ROLE_USER
+        
+        return user_dict
     
     def __repr__(self):
         return f'<User {self.username}>'
