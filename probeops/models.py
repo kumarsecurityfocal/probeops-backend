@@ -35,7 +35,8 @@ class User(db.Model):
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     hashed_password = Column(String(256), nullable=False)
-    password_hash = Column(String(256), nullable=True)  # Legacy field for compatibility
+    # Note: password_hash column was removed (May 2025) as part of standardizing 
+    # on the bcrypt-based hashed_password field for all authentication
     is_active = Column(Boolean, default=True)
     role = Column(String(20), default=ROLE_USER)
     subscription_tier = Column(String(20), default=TIER_FREE)
@@ -57,8 +58,6 @@ class User(db.Model):
         hash_value = generate_password_hash(password)
         # Set hashed_password
         self.hashed_password = hash_value
-        # Also set password_hash for compatibility with other environments
-        self.password_hash = hash_value
     
     def verify_password(self, password):
         """Check if password matches"""
