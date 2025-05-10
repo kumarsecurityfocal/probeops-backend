@@ -35,10 +35,9 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    # Include only the field we're using in the code
     hashed_password = db.Column(db.String(256), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
+    # Don't include is_admin field in SQLAlchemy model to avoid conflicts
     role = db.Column(db.String(20), default=ROLE_USER)
     subscription_tier = db.Column(db.String(20), default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -101,15 +100,16 @@ class User(db.Model):
         """Convert to dictionary for API responses"""
         # Need to convert relationship to a list first, then get its length
         api_keys_list = list(self.api_keys)
+        # Use is_admin_user() method for the is_admin field
         return {
             'id': self.id,
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin,  # Legacy field, kept for backward compatibility
+            'is_admin': self.is_admin_user(),  # Use the method instead of the field
             'role': self.role,
             'subscription_tier': self.subscription_tier,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'api_key_count': len(api_keys_list)
         }
     
