@@ -597,9 +597,21 @@ def dns_probe():
 
 @bp.route("/whois", methods=["GET", "POST"])
 @login_required
-@tier_required(User.TIER_ENTERPRISE)  # Require Enterprise tier
 def whois_probe():
     """Run WHOIS lookup on a domain"""
+    # Get current user for interval check
+    current_user = get_current_user()
+    
+    # Check if enough time has passed since the last request
+    if current_user:
+        can_proceed, error_message, wait_time = check_probe_interval(current_user.id, "whois")
+        if not can_proceed:
+            return jsonify({
+                "error": "Rate limit exceeded",
+                "message": error_message,
+                "wait_time_minutes": round(wait_time, 1)
+            }), 429
+    
     if request.method == "POST":
         data = request.json or {}
         domain = data.get("domain")

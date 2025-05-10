@@ -381,10 +381,197 @@ def get_user_details(user_id):
     })
 
 
+@bp.route("/rate-limits", methods=["GET"])
+@admin_required
+def list_rate_limits():
+    """List all rate limit configurations"""
+    # Import RateLimitConfig from models to avoid circular import
+    from models import RateLimitConfig
+    
+    configs = RateLimitConfig.query.all()
+    
+    # Get default configurations for reference
+    default_configs = {cfg['tier']: cfg for cfg in RateLimitConfig.get_default_configs()}
+    
+    # Build response with current configs and default values
+    response = []
+    for tier in User.VALID_TIERS:
+        # Find existing config for this tier
+        config = next((cfg for cfg in configs if cfg.tier == tier), None)
+        
+        # If no config exists, use default values
+        if not config:
+            default = default_configs.get(tier, {})
+            item = {
+                "tier": tier,
+                "daily_limit": default.get('daily_limit', 0),
+                "monthly_limit": default.get('monthly_limit', 0),
+                "min_interval_minutes": default.get('min_interval_minutes', 0),
+                "is_custom": False,
+                "updated_at": None,
+                "updated_by_user_id": None
+            }
+        else:
+            item = config.to_dict()
+            item["is_custom"] = True
+        
+        response.append(item)
+    
+    return jsonify({
+        "rate_limits": response
+    })
+
+
+@bp.route("/rate-limits/<tier>", methods=["GET"])
+@admin_required
+def get_rate_limit(tier):
+    """Get rate limit configuration for a specific tier"""
+    # Import RateLimitConfig from models to avoid circular import
+    from models import RateLimitConfig
+    
+    if tier not in User.VALID_TIERS:
+        return jsonify({
+            "error": f"Invalid tier. Must be one of: {', '.join(User.VALID_TIERS)}"
+        }), 400
+    
+    # Try to find existing config
+    config = RateLimitConfig.query.filter_by(tier=tier).first()
+    
+    # If no config exists, use default values
+    if not config:
+        default_configs = {cfg['tier']: cfg for cfg in RateLimitConfig.get_default_configs()}
+        default = default_configs.get(tier, {})
+        return jsonify({
+            "tier": tier,
+            "daily_limit": default.get('daily_limit', 0),
+            "monthly_limit": default.get('monthly_limit', 0),
+            "min_interval_minutes": default.get('min_interval_minutes', 0),
+            "is_custom": False,
+            "updated_at": None,
+            "updated_by_user_id": None
+        })
+    
+    # Return existing config
+    response = config.to_dict()
+    response["is_custom"] = True
+    return jsonify(response)
+
+
+@bp.route("/rate-limits/<tier>", methods=["POST"])
+@admin_required
+def update_rate_limit(tier):
+    """Update rate limit configuration for a specific tier"""
+    # Import RateLimitConfig from models to avoid circular import
+    from models import RateLimitConfig
+    
+    if tier not in User.VALID_TIERS:
+        return jsonify({
+            "error": f"Invalid tier. Must be one of: {', '.join(User.VALID_TIERS)}"
+        }), 400
+    
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    # Validate required fields
+    required_fields = ["daily_limit", "monthly_limit", "min_interval_minutes"]
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Missing required field: {field}"}), 400
+    
+    # Validate numeric values
+    for field in required_fields:
+        if not isinstance(data[field], (int, float)) or data[field] < 0:
+            return jsonify({"error": f"{field} must be a positive number"}), 400
+    
+    # Get current user
+    current_user = get_current_user()
+    
+    # Try to find existing config
+    config = RateLimitConfig.query.filter_by(tier=tier).first()
+    
+    # If no config exists, create a new one
+    if not config:
+        config = RateLimitConfig(
+            tier=tier,
+            daily_limit=data["daily_limit"],
+            monthly_limit=data["monthly_limit"],
+            min_interval_minutes=data["min_interval_minutes"],
+            updated_by_user_id=current_user.id if current_user else None
+        )
+        db.session.add(config)
+    else:
+        # Update existing config
+        config.daily_limit = data["daily_limit"]
+        config.monthly_limit = data["monthly_limit"]
+        config.min_interval_minutes = data["min_interval_minutes"]
+        config.updated_by_user_id = current_user.id if current_user else None
+    
+    try:
+        db.session.commit()
+        response = config.to_dict()
+        response["is_custom"] = True
+        return jsonify({
+            "message": f"Rate limit configuration for {tier} tier updated successfully",
+            "rate_limit": response
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating rate limit config: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/rate-limits/<tier>/reset", methods=["POST"])
+@admin_required
+def reset_rate_limit(tier):
+    """Reset rate limit configuration for a specific tier to default values"""
+    # Import RateLimitConfig from models to avoid circular import
+    from models import RateLimitConfig
+    
+    if tier not in User.VALID_TIERS:
+        return jsonify({
+            "error": f"Invalid tier. Must be one of: {', '.join(User.VALID_TIERS)}"
+        }), 400
+    
+    # Find existing config
+    config = RateLimitConfig.query.filter_by(tier=tier).first()
+    if not config:
+        return jsonify({
+            "message": f"No custom configuration exists for {tier} tier",
+            "tier": tier,
+            "is_default": True
+        })
+    
+    # Delete custom config to restore defaults
+    try:
+        db.session.delete(config)
+        db.session.commit()
+        
+        # Get default values
+        default_configs = {cfg['tier']: cfg for cfg in RateLimitConfig.get_default_configs()}
+        default = default_configs.get(tier, {})
+        
+        return jsonify({
+            "message": f"Rate limit configuration for {tier} tier reset to default values",
+            "tier": tier,
+            "daily_limit": default.get('daily_limit', 0),
+            "monthly_limit": default.get('monthly_limit', 0),
+            "min_interval_minutes": default.get('min_interval_minutes', 0),
+            "is_default": True
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error resetting rate limit config: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @bp.route("/status", methods=["GET"])
 @admin_required
 def admin_status():
     """Admin status endpoint"""
+    # Import RateLimitConfig from models to avoid circular import
+    from models import RateLimitConfig
+    
     user_count = User.query.count()
     admin_count = User.query.filter_by(role=User.ROLE_ADMIN).count()
     active_count = User.query.filter_by(is_active=True).count()
@@ -415,6 +602,10 @@ def admin_status():
     probe_counts = {probe_type: count for probe_type, count in probe_stats}
     total_probes = sum(probe_counts.values())
     
+    # Get rate limit configurations
+    rate_limit_configs = RateLimitConfig.query.all()
+    rate_limits = [config.to_dict() for config in rate_limit_configs]
+    
     return jsonify({
         "status": "ok",
         "users": {
@@ -429,5 +620,6 @@ def admin_status():
         "probes": {
             "total": total_probes,
             "by_type": probe_counts
-        }
+        },
+        "rate_limits": rate_limits
     })
