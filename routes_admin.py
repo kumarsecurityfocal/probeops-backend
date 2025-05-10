@@ -2,13 +2,13 @@
 Admin management routes for ProbeOps API
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify, current_app, g
 from sqlalchemy.exc import IntegrityError
 
 # Import directly from flask_server (which is the primary implementation)
-from flask_server import db, User, ApiKey, login_required, admin_required, role_required, tier_required, create_jwt_token
+from flask_server import db, User, ApiKey, ProbeJob, login_required, admin_required, role_required, tier_required, create_jwt_token
 
 # Helper function to get current user
 def get_current_user():
@@ -68,7 +68,7 @@ def update_user_role(user_id):
     current_user = get_current_user()
     
     # Prevent users from changing their own role (security measure)
-    if user.id == current_user.id:
+    if current_user and user.id == current_user.id:
         return jsonify({"error": "You cannot change your own role"}), 403
     
     data = request.json
@@ -100,16 +100,32 @@ def update_user_role(user_id):
 @bp.route("/users/<int:user_id>/promote", methods=["POST"])
 @admin_required
 def promote_user(user_id):
-    """Promote user to admin role (legacy endpoint, redirects to role update)"""
-    # Get request data and add role=admin to it
-    data = request.json or {}
-    data["role"] = User.ROLE_ADMIN
+    """Promote user to admin role (legacy endpoint)"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
     
-    # Save original request data
-    request.json = data
+    # Get current admin user
+    current_user = get_current_user()
     
-    # Forward to the new endpoint
-    return update_user_role(user_id)
+    # Prevent users from changing their own role (security measure)
+    if current_user and user.id == current_user.id:
+        return jsonify({"error": "You cannot change your own role"}), 403
+    
+    # Update user role to admin
+    user.role = User.ROLE_ADMIN
+    user.is_admin = True  # Update legacy field for backward compatibility
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            "message": "User promoted to admin successfully",
+            "user": user.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error promoting user: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 @bp.route("/users/<int:user_id>/tier", methods=["POST"])
@@ -142,6 +158,44 @@ def update_subscription_tier(user_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error updating subscription tier: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/users/<int:user_id>/status", methods=["POST"])
+@admin_required
+def toggle_user_active_status(user_id):
+    """Activate or deactivate a user account"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Get current admin user
+    current_user = get_current_user()
+    
+    # Prevent users from deactivating themselves (security measure)
+    if user.id == current_user.id:
+        return jsonify({"error": "You cannot change your own active status"}), 403
+    
+    data = request.json
+    if not data or "is_active" not in data:
+        return jsonify({"error": "Missing is_active parameter"}), 400
+    
+    # Get the desired active status (true or false)
+    is_active = bool(data["is_active"])
+    
+    # Update user's active status
+    user.is_active = is_active
+    
+    try:
+        db.session.commit()
+        status_text = "activated" if is_active else "deactivated"
+        return jsonify({
+            "message": f"User {status_text} successfully",
+            "user": user.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating user status: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -229,7 +283,7 @@ def admin_status():
     inactive_count = user_count - active_count
     
     # Get active users in the last 30 days
-    thirty_days_ago = datetime.utcnow() - datetime.timedelta(days=30)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     recent_users = db.session.query(
         db.func.count(db.distinct(ProbeJob.user_id))
     ).filter(ProbeJob.created_at >= thirty_days_ago).scalar() or 0
