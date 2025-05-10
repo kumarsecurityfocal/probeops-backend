@@ -3,7 +3,7 @@ Name: probeops
 Version: 1.0.0
 Summary: Network Diagnostics API with JWT Authentication and API Keys
 Author: ProbeOps Team
-License: MIT
+License-Expression: MIT
 Requires-Python: >=3.10
 Requires-Dist: flask>=2.2.0
 Requires-Dist: flask-cors>=3.0.0

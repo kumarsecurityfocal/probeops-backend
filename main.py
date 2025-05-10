@@ -1,21 +1,14 @@
 """
 Main entry point for the ProbeOps API.
-This file imports the Flask server for use with gunicorn.
+This file imports the Flask app for use with gunicorn.
 """
-import os
-import logging
+from flask_migrate import Migrate
+from probeops.app import create_app, db
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+app = create_app()
 
-# Import our application from the flask_server.py file
-from flask_server import app, application
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)
 
-# For direct execution
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host='0.0.0.0', port=5000)

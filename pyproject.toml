@@ -24,7 +24,9 @@ dependencies = [
     "python-dotenv>=0.20.0",
     "sqlalchemy>=2.0.0",
     "gunicorn>=21.0.0",
-    "requests>=2.20.0"
+    "requests>=2.20.0",
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.2",
 ]
 
 [tool.setuptools]
