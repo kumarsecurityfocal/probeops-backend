@@ -1478,20 +1478,39 @@ def register():
 def login():
     """Login and get JWT token"""
     data = request.json
+    logger.debug(f"Login attempt with data: {data}")
+    
     if not data:
+        logger.warning("Login attempt with no data provided")
         return jsonify({"error": "No data provided"}), 400
     
     # Check required fields
     if ("username" not in data and "email" not in data) or "password" not in data:
+        logger.warning("Login attempt missing required fields")
         return jsonify({"error": "Missing email/username or password"}), 400
     
     # Find user by username or email
     if "email" in data:
         user = User.query.filter_by(email=data["email"]).first()
+        logger.debug(f"Looking up user by email: {data['email']}, found: {user is not None}")
     else:
         user = User.query.filter_by(username=data["username"]).first()
-        
-    if not user or not user.verify_password(data["password"]):
+        logger.debug(f"Looking up user by username: {data['username']}, found: {user is not None}")
+    
+    if not user:
+        logger.warning(f"Login attempt with non-existent user")
+        return jsonify({"error": "Invalid email/username or password"}), 401
+    
+    # Add detailed logging for password verification
+    logger.debug(f"Attempting password verification for user: {user.username}")
+    logger.debug(f"Hash format in database: {user.hashed_password[:30] if user.hashed_password else 'None'}")
+    
+    # Try to authenticate with password
+    verified = user.verify_password(data["password"])
+    logger.debug(f"Password verification result: {verified}")
+    
+    if not verified:
+        logger.warning(f"Failed login attempt for user: {user.username}")
         return jsonify({"error": "Invalid email/username or password"}), 401
     
     # Check if user is active
