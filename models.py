@@ -35,11 +35,13 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    # Keep both password fields for compatibility, but mainly use password_hash
+    hashed_password = db.Column(db.String(256))
+    password_hash = db.Column(db.String(256))
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
-    role = db.Column(db.String(20), nullable=False, default=ROLE_USER)
-    subscription_tier = db.Column(db.String(20), nullable=False, default=TIER_FREE)
+    role = db.Column(db.String(20), default=ROLE_USER)
+    subscription_tier = db.Column(db.String(20), default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -54,7 +56,11 @@ class User(db.Model):
     @password.setter
     def password(self, password):
         """Set password hash"""
-        self.password_hash = generate_password_hash(password)
+        # Generate the password hash
+        hash_value = generate_password_hash(password)
+        # Set both hash fields for compatibility
+        self.password_hash = hash_value
+        self.hashed_password = hash_value
     
     def verify_password(self, password):
         """Check if password matches"""
