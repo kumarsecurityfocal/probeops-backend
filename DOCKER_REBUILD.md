@@ -121,3 +121,38 @@ python verify_model_compatibility.py
 ```
 
 This script will exit with code 0 on success or 1 on failure.
+
+## Running Flask CLI Commands
+
+### Using the Helper Script
+
+We've provided a convenient helper script for running Flask CLI commands in the Docker container:
+
+```
+./flask-cli.sh [flask-command]
+```
+
+Examples:
+```
+./flask-cli.sh routes                   # Show all application routes
+./flask-cli.sh db upgrade               # Run database migrations
+./flask-cli.sh db migrate -m "message"  # Create a new migration
+./flask-cli.sh shell                    # Start interactive Python shell
+```
+
+### Manual Execution
+
+If you prefer to run commands manually:
+
+```
+docker compose -f docker-compose.backend.yml exec api flask --app main:app [command]
+```
+
+For example:
+```
+docker compose -f docker-compose.backend.yml exec api flask --app main:app routes
+```
+
+### Important Note
+
+The Flask application is configured using `main:app`. This path should be used consistently for all Flask CLI commands.
