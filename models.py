@@ -84,27 +84,27 @@ class User(Model):
     
     def verify_password(self, password):
         """Check if password matches"""
-        # For bcrypt format (used in production)
-        if self.hashed_password:
-            # Check if it's a bcrypt hash
-            if self.hashed_password.startswith('$2b$'):
-                try:
-                    return bcrypt_sha256.verify(password, self.hashed_password)
-                except Exception:
-                    # If verification fails, continue to other methods
-                    pass
-            # Check if it's a werkzeug hash
-            else:
-                try:
-                    return check_password_hash(self.hashed_password, password)
-                except Exception:
-                    # If verification fails, continue to other methods
-                    pass
-        
-        # password_hash field removed after schema cleanup (May 2025)
-        # Legacy compatibility check removed
+        # If no password hash is set, verification fails
+        if not self.hashed_password:
+            return False
+            
+        # Check if it's a bcrypt hash - our preferred format
+        if self.hashed_password.startswith('$2b$'):
+            try:
+                return bcrypt_sha256.verify(password, self.hashed_password)
+            except Exception as e:
+                # Log the specific error but don't expose it
+                logger.error(f"Bcrypt verification error: {str(e)}")
+                return False
                 
-        return False
+        # Check if it's a werkzeug hash - legacy but still supported
+        else:
+            try:
+                return check_password_hash(self.hashed_password, password)
+            except Exception as e:
+                # Log the specific error but don't expose it  
+                logger.error(f"Werkzeug verification error: {str(e)}")
+                return False
     
     def is_admin_user(self):
         """Check if user has admin role"""

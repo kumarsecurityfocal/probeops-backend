@@ -61,25 +61,27 @@ class User(db.Model):
     
     def verify_password(self, password):
         """Check if password matches"""
-        # Try different password verification methods
-        
-        # Try werkzeug hash first
-        if self.hashed_password:
+        # If no password hash is set, verification fails
+        if not self.hashed_password:
+            return False
+            
+        # Try bcrypt hash first - our preferred format
+        if self.hashed_password.startswith('$2b$'):
             try:
-                if check_password_hash(self.hashed_password, password):
-                    return True
+                return bcrypt_sha256.verify(password, self.hashed_password)
             except Exception as e:
-                logger.warning(f"Failed to verify with werkzeug: {e}")
-        
-        # Try bcrypt hash next
-        if self.hashed_password and self.hashed_password.startswith('$2b$'):
+                # Log the specific error but don't expose it
+                logger.error(f"Bcrypt verification error: {str(e)}")
+                return False
+                
+        # Try werkzeug hash as fallback
+        else:
             try:
-                if bcrypt_sha256.verify(password, self.hashed_password):
-                    return True
+                return check_password_hash(self.hashed_password, password)
             except Exception as e:
-                logger.warning(f"Failed to verify with bcrypt: {e}")
-        
-        return False
+                # Log the specific error but don't expose it
+                logger.error(f"Werkzeug verification error: {str(e)}")
+                return False
     
     def is_admin_user(self):
         """Check if user has admin role"""

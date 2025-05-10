@@ -110,6 +110,7 @@ def register_auth_routes(bp):
         
         # Debug info - DO NOT include this in production code!
         logger.info(f"Found user: id={user.id}, username={user.username}, active={user.is_active}")
+        # Log only the hash type prefix for debugging
         logger.info(f"Hash types - hashed_password: {user.hashed_password[:20] if user.hashed_password else 'None'}")
         
         # ======================= TEMPORARY FIX FOR TESTING =======================
