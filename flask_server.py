@@ -232,21 +232,48 @@ class User(db.Model):
     """User model for authentication"""
     __tablename__ = 'users'
     
+    # Role constants
+    ROLE_USER = 'user'
+    ROLE_ADMIN = 'admin'
+    
+    # Subscription tier constants
+    TIER_FREE = 'Free'
+    TIER_STANDARD = 'Standard'
+    TIER_ENTERPRISE = 'Enterprise'
+    
+    # Valid subscription tiers
+    VALID_TIERS = [TIER_FREE, TIER_STANDARD, TIER_ENTERPRISE]
+    
+    # Valid user roles
+    VALID_ROLES = [ROLE_USER, ROLE_ADMIN]
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    hashed_password = db.Column(db.String(256), nullable=False) # Changed to match DB structure
+    hashed_password = db.Column(db.String(256)) # Field from the original DB structure
+    password_hash = db.Column(db.String(256))   # Added for compatibility with other code
     is_active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
+    role = db.Column(db.String(20), default=ROLE_USER)
+    subscription_tier = db.Column(db.String(20), default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Virtual property for admin checks (not in database)
-    @property
-    def is_admin(self):
-        """
-        Check if user is admin based on username
-        Since there's no is_admin column, we'll consider users with username 'admin' as admins
-        """
-        return self.username == 'admin'
+    def is_admin_user(self):
+        """Check if user has admin role"""
+        return self.role == self.ROLE_ADMIN
+        
+    def has_tier(self, tier):
+        """Check if user has a specific subscription tier or higher"""
+        tier_levels = {
+            self.TIER_FREE: 0,
+            self.TIER_STANDARD: 1,
+            self.TIER_ENTERPRISE: 2
+        }
+        
+        user_tier_level = tier_levels.get(self.subscription_tier, 0)
+        required_tier_level = tier_levels.get(tier, 0)
+        
+        return user_tier_level >= required_tier_level
     
     # Relationships
     api_keys = db.relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
@@ -260,23 +287,37 @@ class User(db.Model):
     @password.setter
     def password(self, password):
         """Set password hash"""
-        # Use default method which produces shorter hashes
-        self.hashed_password = generate_password_hash(password)
+        # Generate the password hash
+        hash_value = generate_password_hash(password)
+        # Set both hash fields for compatibility
+        self.hashed_password = hash_value
+        self.password_hash = hash_value
     
     def verify_password(self, password):
         """Check if password matches"""
-        return check_password_hash(self.hashed_password, password)
+        # Try the primary password field first
+        if self.hashed_password:
+            return check_password_hash(self.hashed_password, password)
+        # Fall back to password_hash if hashed_password is not available
+        elif self.password_hash:
+            return check_password_hash(self.password_hash, password)
+        # No password field available
+        return False
     
     def to_dict(self):
         """Convert to dictionary for API responses"""
+        # Need to convert relationship to a list first, then get its length
+        api_keys_list = list(self.api_keys)
         return {
             'id': self.id,
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin,
+            'is_admin': self.is_admin,  # Legacy field, kept for backward compatibility
+            'role': self.role,
+            'subscription_tier': self.subscription_tier,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'api_key_count': len(self.api_keys)
+            'api_key_count': len(api_keys_list)
         }
     
     def __repr__(self):
@@ -512,7 +553,10 @@ def admin_required(f):
                 "error": "Authentication required", 
                 "message": "Please provide a valid JWT token or API key."
             }), 401
-        if not current_user.is_admin:
+        
+        # Check for admin using the is_admin field (for backward compatibility)
+        # or the new role field (for RBAC)
+        if not current_user.is_admin and current_user.role != User.ROLE_ADMIN:
             return jsonify({
                 "error": "Forbidden", 
                 "message": "Admin privileges required."
@@ -550,6 +594,114 @@ def admin_required(f):
             }), 500
             
     return decorated
+
+
+def role_required(role):
+    """Decorator to require a specific role"""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            current_user = get_current_user()
+            if not current_user:
+                return jsonify({
+                    "error": "Authentication required", 
+                    "message": "Please provide a valid JWT token or API key."
+                }), 401
+            
+            # Check if user has the required role
+            if current_user.role != role:
+                return jsonify({
+                    "error": "Forbidden", 
+                    "message": f"Role '{role}' required."
+                }), 403
+            
+            try:
+                # Call the original function
+                response = f(*args, **kwargs)
+                
+                # Ensure the response is properly formatted as JSON
+                if not isinstance(response, tuple):
+                    # If it's not a tuple, it's just the response body
+                    if not isinstance(response, dict) and not hasattr(response, 'get_json'):
+                        # Not a json response, convert it
+                        return jsonify({"data": str(response)}), 200
+                    return response
+                else:
+                    # It's a tuple with (response, status_code)
+                    body, status_code = response[0], response[1]
+                    # If response body is not already jsonified
+                    if not hasattr(body, 'get_json'):
+                        if not isinstance(body, dict):
+                            # Convert non-dict to JSON
+                            return jsonify({"data": str(body)}), status_code
+                        # Convert dict to JSON
+                        return jsonify(body), status_code
+                    return response
+            except Exception as e:
+                # Log the error
+                logger.error(f"Error in role-protected route: {str(e)}")
+                # Return a JSON error response
+                return jsonify({
+                    "error": "Server error",
+                    "message": str(e)
+                }), 500
+                
+        return decorated
+    return decorator
+
+
+def tier_required(tier):
+    """Decorator to require a specific subscription tier or higher"""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            current_user = get_current_user()
+            if not current_user:
+                return jsonify({
+                    "error": "Authentication required", 
+                    "message": "Please provide a valid JWT token or API key."
+                }), 401
+            
+            # Check subscription tier
+            if not current_user.has_tier(tier):
+                return jsonify({
+                    "error": "Subscription Required", 
+                    "message": f"This endpoint requires '{tier}' subscription or higher."
+                }), 403
+            
+            try:
+                # Call the original function
+                response = f(*args, **kwargs)
+                
+                # Ensure the response is properly formatted as JSON
+                if not isinstance(response, tuple):
+                    # If it's not a tuple, it's just the response body
+                    if not isinstance(response, dict) and not hasattr(response, 'get_json'):
+                        # Not a json response, convert it
+                        return jsonify({"data": str(response)}), 200
+                    return response
+                else:
+                    # It's a tuple with (response, status_code)
+                    body, status_code = response[0], response[1]
+                    # If response body is not already jsonified
+                    if not hasattr(body, 'get_json'):
+                        if not isinstance(body, dict):
+                            # Convert non-dict to JSON
+                            return jsonify({"data": str(body)}), status_code
+                        # Convert dict to JSON
+                        return jsonify(body), status_code
+                    return response
+            except Exception as e:
+                # Log the error
+                logger.error(f"Error in tier-protected route: {str(e)}")
+                # Return a JSON error response
+                return jsonify({
+                    "error": "Server error",
+                    "message": str(e)
+                }), 500
+                
+        return decorated
+    return decorator
 
 
 # Network probe functions
