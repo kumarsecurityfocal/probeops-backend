@@ -537,6 +537,9 @@ def create_jwt_token(user):
     payload = {
         "sub": str(user.id),  # Convert ID to string for JWT
         "username": user.username,
+        "email": user.email,
+        "role": user.role,
+        "subscription_tier": user.subscription_tier,
         "exp": datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION),
         "iat": datetime.utcnow()
     }
@@ -1420,13 +1423,17 @@ def login():
         return jsonify({"error": "No data provided"}), 400
     
     # Check required fields
-    if "username" not in data or "password" not in data:
-        return jsonify({"error": "Missing username or password"}), 400
+    if ("username" not in data and "email" not in data) or "password" not in data:
+        return jsonify({"error": "Missing email/username or password"}), 400
     
-    # Find user by username
-    user = User.query.filter_by(username=data["username"]).first()
+    # Find user by username or email
+    if "email" in data:
+        user = User.query.filter_by(email=data["email"]).first()
+    else:
+        user = User.query.filter_by(username=data["username"]).first()
+        
     if not user or not user.verify_password(data["password"]):
-        return jsonify({"error": "Invalid username or password"}), 401
+        return jsonify({"error": "Invalid email/username or password"}), 401
     
     # Check if user is active
     if not user.is_active:

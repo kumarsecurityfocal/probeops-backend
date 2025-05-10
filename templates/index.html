@@ -80,8 +80,8 @@
                             <div class="card-body">
                                 <form id="loginForm">
                                     <div class="mb-3">
-                                        <label for="loginUsername" class="form-label">Username</label>
-                                        <input type="text" class="form-control" id="loginUsername" required>
+                                        <label for="loginEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="loginEmail" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="loginPassword" class="form-label">Password</label>
@@ -424,7 +424,7 @@
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const username = document.getElementById('loginUsername').value;
+            const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             
             try {
@@ -433,7 +433,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ email, password })
                 });
                 
                 const data = await response.json();
