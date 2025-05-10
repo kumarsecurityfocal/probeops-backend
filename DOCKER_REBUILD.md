@@ -1,99 +1,123 @@
-# Docker Container Rebuild Process
+# ProbeOps Docker Rebuild & Database Migration Guide
 
-This document outlines the process for rebuilding the Docker container for the ProbeOps API backend.
+This document explains how to rebuild the Docker containers and manage database migrations for ProbeOps API.
 
-## When to Rebuild
+## Prerequisites
 
-Rebuild the Docker container when:
-1. You update dependencies in `requirements.docker.txt`
-2. You make changes to the Dockerfile
-3. You need to reset the environment due to issues
+- Docker and Docker Compose installed
+- PostgreSQL database service running (either local or remote)
+- Environment variables properly configured in `.env` or environment
 
-## Automated Rebuild & Migration
+## Automated Scripts
 
-Use the provided script to automatically rebuild the Docker containers and run migrations:
+Three helper scripts are provided to simplify container management:
 
-```bash
-./update-backend.sh
-```
+1. **`update-backend.sh`** - Rebuilds and restarts the backend containers with migrations
+2. **`test-migrations.sh`** - Tests migration process without rebuilding
+3. **`verify_model_compatibility.py`** - Verifies model compatibility across environments
 
-This script will:
-1. Stop existing containers
-2. Rebuild with the latest code
-3. Start the containers
-4. Create migration files if schema changes are detected
-5. Apply all pending migrations
+## Database Compatibility Notes
 
-## Migration Testing
+The system supports two different database schemas to maintain compatibility:
 
-To verify the Flask-Migrate setup is working:
+- Modern environments use `role` and `hashed_password` columns
+- Legacy environments use `is_admin` and `password_hash` columns
+- The migration system keeps both in sync automatically
 
-```bash
-./test-migrations.sh
-```
+## Manual Rebuild Process
 
-## Manual Rebuild Steps
+If you need to manually rebuild and update the containers:
 
-If you prefer to rebuild manually, follow these steps:
+1. **Stop existing containers**:
+   ```
+   docker compose -f docker-compose.backend.yml down
+   ```
 
-1. Stop the current containers:
-```bash
-docker compose -f docker-compose.backend.yml down
-```
+2. **Rebuild containers**:
+   ```
+   docker compose -f docker-compose.backend.yml build --no-cache
+   ```
 
-2. Rebuild the images with no cache:
-```bash
-docker compose -f docker-compose.backend.yml build --no-cache
-```
+3. **Start containers**:
+   ```
+   docker compose -f docker-compose.backend.yml up -d
+   ```
 
-3. Start the new containers:
-```bash
-docker compose -f docker-compose.backend.yml up -d
-```
+4. **Apply migrations**:
+   ```
+   docker compose -f docker-compose.backend.yml exec api flask db upgrade
+   ```
 
-4. Check container status:
-```bash
-docker compose -f docker-compose.backend.yml ps
-```
+5. **Verify health**:
+   ```
+   curl http://localhost:5000/api/health
+   ```
 
-5. Create and run database migrations:
-```bash
-docker compose -f docker-compose.backend.yml exec api flask db migrate -m "Schema changes"
-docker compose -f docker-compose.backend.yml exec api flask db upgrade
-```
+## Migration Process
+
+The system uses Flask-Migrate to handle database migrations:
+
+1. **Set Flask application**:
+   ```
+   export FLASK_APP=probeops.app
+   ```
+
+2. **Create a new migration**:
+   ```
+   flask db migrate -m "Description of changes"
+   ```
+
+3. **Review migration file**:
+   The migration file will be created in `migrations/versions/`.
+   Review and modify it if necessary.
+
+4. **Apply migration**:
+   ```
+   flask db upgrade
+   ```
+
+5. **Revert migration (if needed)**:
+   ```
+   flask db downgrade
+   ```
+
+## Container Initialization
+
+When containers start, the following sequence happens automatically:
+
+1. Wait for the database to be available
+2. Set Flask application environment variables
+3. Mark current database state with `flask db stamp head`
+4. Generate migrations for schema changes with `flask db migrate`
+5. Apply migrations with `flask db upgrade`
+6. Verify compatibility columns exist
+7. Start the application server
 
 ## Troubleshooting
 
-### Container Won't Start
-If the container fails to start, check the logs:
-```bash
-docker compose -f docker-compose.backend.yml logs api
+- **Container fails to start**: Check logs with `docker compose -f docker-compose.backend.yml logs api`
+- **Migration errors**: Run `test-migrations.sh` to debug migration issues
+- **Database connection issues**: Verify database host, username, and password in environment
+- **Missing tables**: Ensure `flask db upgrade` completes successfully
+- **Missing columns**: Verify the compatibility migration has been applied
+
+## Key Column Compatibility
+
+The User model supports multiple column naming schemes:
+
+| Modern Column     | Legacy Column    | Purpose                   |
+|-------------------|------------------|---------------------------|
+| `hashed_password` | `password_hash`  | Store secure password     |
+| `role`            | `is_admin`       | Track administrative role |
+
+Both are kept synchronized through property methods in the User model.
+
+## Testing Integration
+
+For CI/CD pipelines, use the `verify_model_compatibility.py` script:
+
+```
+python verify_model_compatibility.py
 ```
 
-### Database Migration Issues
-If migrations fail, you might need to troubleshoot:
-
-1. Check migration history:
-```bash
-docker compose -f docker-compose.backend.yml exec api flask db history
-```
-
-2. Get current migration version:
-```bash
-docker compose -f docker-compose.backend.yml exec api flask db current
-```
-
-3. For schema conflicts, you may need to manually modify the migration file in migrations/versions/ before upgrading.
-
-### Missing Columns Issues
-If you see errors about missing columns like `users.password_hash` or `users.is_admin`, ensure:
-
-1. Your migration files have been created properly
-2. You've run the flask db upgrade command
-3. The start.sh script is properly setting FLASK_APP and running migrations
-
-### Network Issues
-If containers can't connect to each other, check the network:
-```bash
-docker network inspect probeops-network
-```
+This script will exit with code 0 on success or 1 on failure.

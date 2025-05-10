@@ -59,7 +59,68 @@ export FLASK_APP=main:app
 # Run database migrations
 echo "Setting up database tables..."
 echo "Running migrations with Flask-Migrate..."
-flask db upgrade
+
+# First try to stamp current database state
+flask db stamp head || echo "Warning: Could not stamp database revision, may be first run"
+
+# Generate migration if schema changes exist
+flask db migrate -m "Auto migration from container startup" || echo "Warning: No schema changes detected"
+
+# Apply migrations
+if ! flask db upgrade; then
+    echo "Error: Migration failed! Please check database connection and schema compatibility"
+    exit 1
+fi
+
+# Check for compatibility columns
+echo "Verifying compatibility columns..."
+PYTHON_CHECK="
+import sys
+from sqlalchemy import inspect, create_engine
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+# Create minimal app context
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = '$DATABASE_URL'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+with app.app_context():
+    # Check database schema
+    inspector = inspect(db.engine)
+    
+    if 'users' not in inspector.get_table_names():
+        print('Users table does not exist yet')
+        sys.exit(0)
+    
+    columns = {c['name'] for c in inspector.get_columns('users')}
+    missing = []
+    
+    if 'password_hash' not in columns:
+        missing.append('password_hash')
+    if 'is_admin' not in columns:
+        missing.append('is_admin')
+    
+    if missing:
+        print(f'Missing compatibility columns: {missing}')
+        sys.exit(1)
+    else:
+        print('All compatibility columns present')
+        sys.exit(0)
+"
+
+# Run the compatibility check
+if ! python -c "$PYTHON_CHECK"; then
+    echo "Warning: Compatibility columns are missing. Running compatibility migration..."
+    # Apply our custom migration for compatibility columns
+    if [ -f migrations/versions/add_compatibility_columns.py ]; then
+        FLASK_APP=main:app flask db upgrade add_compatibility_columns
+    else
+        echo "Error: Compatibility migration script not found!"
+    fi
+fi
+
 echo "Database setup complete."
 
 # Determine number of workers based on environment or CPU cores
