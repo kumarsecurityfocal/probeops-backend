@@ -492,14 +492,25 @@ def get_current_user():
         
         # Check for JWT token
         auth_header = request.headers.get('Authorization')
+        logger.debug(f"Authorization header: {auth_header}")
+        
         if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            try:
-                user = verify_jwt_token(token)
-                if user:
-                    g.current_user = user
-            except Exception as e:
-                logger.warning(f"JWT validation error: {str(e)}")
+            parts = auth_header.split(' ')
+            if len(parts) != 2:
+                logger.warning(f"Invalid Authorization format: {auth_header}")
+            else:
+                token = parts[1]
+                logger.debug(f"Extracted JWT token: {token[:10]}... (length: {len(token)})")
+                
+                try:
+                    user = verify_jwt_token(token)
+                    if user:
+                        logger.debug(f"Authenticated user: {user.username} (ID: {user.id})")
+                        g.current_user = user
+                    else:
+                        logger.warning("JWT token verification returned no user")
+                except Exception as e:
+                    logger.warning(f"JWT validation error: {str(e)}")
         
         # If no valid JWT, check for API key in different formats
         if not g.current_user:
@@ -561,12 +572,17 @@ def create_jwt_token(user):
 def verify_jwt_token(token):
     """Verify the JWT token and return the user"""
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        # Decode and verify the token with options
+        payload = jwt.decode(
+            token, 
+            JWT_SECRET, 
+            algorithms=[JWT_ALGORITHM],
+            options={"verify_signature": True, "verify_exp": True}
+        )
         user_id = payload.get("sub")
         
-        # Check if token is expired
-        if "exp" in payload and time.time() > payload["exp"]:
-            return None
+        # JWT's exp field is already checked by PyJWT during decode
+        # So we don't need an explicit check here
         
         # Convert string ID back to integer
         user = User.query.filter_by(id=int(user_id), is_active=True).first()
