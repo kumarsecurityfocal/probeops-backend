@@ -19,7 +19,8 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from passlib.hash import bcrypt_sha256
+# Import bcrypt directly for native hash verification
+import bcrypt
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # Load environment variables from .env file if present

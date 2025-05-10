@@ -66,25 +66,37 @@ class User(db.Model):
         if not self.hashed_password:
             logger.warning(f"Password verification failed for user {self.username}: No hash set")
             return False
+        
+        # Add detailed logging for easier debugging
+        logger.debug(f"Verifying password for user {self.username}")
+        logger.debug(f"Password hash type: {self.hashed_password[:20]}")
+        logger.debug(f"Actual input password: {password[:3]}***{password[-2:] if len(password) > 2 else ''}")
             
         try:
             # For werkzeug's standard formats (pbkdf2, scrypt)
             if self.hashed_password.startswith(('pbkdf2:', 'scrypt:')):
-                logger.debug(f"Verifying with werkzeug for user {self.username}")
-                return check_password_hash(self.hashed_password, password)
+                verified = check_password_hash(self.hashed_password, password)
+                logger.debug(f"Werkzeug verification result: {verified}")
+                return verified
+                
             # For bcrypt hashes
             elif self.hashed_password.startswith('$2'):
                 # Import bcrypt directly to handle native bcrypt hashes
                 import bcrypt
-                logger.debug(f"Verifying with bcrypt for user {self.username}")
                 # Convert strings to bytes for bcrypt
                 encoded_password = password.encode('utf-8')
                 encoded_hash = self.hashed_password.encode('utf-8')
-                return bcrypt.checkpw(encoded_password, encoded_hash)
+                verified = bcrypt.checkpw(encoded_password, encoded_hash)
+                logger.debug(f"Bcrypt verification result: {verified}")
+                return verified
+                
             # For any other hash type
             else:
-                logger.debug(f"Fallback to werkzeug for user {self.username}")
-                return check_password_hash(self.hashed_password, password)
+                logger.debug(f"Using fallback verification method")
+                verified = check_password_hash(self.hashed_password, password)
+                logger.debug(f"Fallback verification result: {verified}")
+                return verified
+                
         except Exception as e:
             # Log the specific error but don't expose it
             logger.error(f"Password verification error for user {self.username}: {str(e)}")

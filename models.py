@@ -9,7 +9,8 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask import current_app
 from sqlalchemy import text
-from passlib.hash import bcrypt_sha256
+# Import bcrypt directly for native hash verification
+import bcrypt
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # We need to handle circular imports carefully
