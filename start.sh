@@ -55,7 +55,14 @@ echo "- Keepalive: ${KEEPALIVE:-5}s"
 
 # Run database migrations or initialization
 echo "Setting up database tables..."
-python -c "from flask_server import app, db; app.app_context().push(); db.create_all()"
+# Check if flask db command is available (Flask-Migrate)
+if python -m flask db --help > /dev/null 2>&1; then
+    echo "Running migrations with Flask-Migrate..."
+    python -m flask db upgrade
+else
+    echo "Flask-Migrate not available, falling back to manual schema creation..."
+    python -c "from flask_server import app, db; app.app_context().push(); db.create_all()"
+fi
 echo "Database setup complete."
 
 # Determine number of workers based on environment or CPU cores
