@@ -37,24 +37,22 @@ def register_routes(app):
                 "/api/apikeys"
             ]
         })
-        
-    @api_bp.route('/dashboard')
-    def dashboard():
-        """Serve the dashboard page"""
-        from flask import render_template
-        return render_template('dashboard.html')
     
     @api_bp.route('/health')
     def health_check():
         """Health check endpoint"""
         return jsonify({"status": "ok"})
     
-    # Root route serves landing page
+    # Root route redirects to API root
     @app.route('/')
     def root():
-        """Serve landing page"""
-        from flask import render_template
-        return render_template('landing.html')
+        """Redirect root to API documentation"""
+        return jsonify({
+            "name": "ProbeOps API",
+            "version": "1.0.0",
+            "message": "Welcome to ProbeOps API",
+            "api_root": "/api"
+        })
     
     # Register all blueprints with the app
     app.register_blueprint(api_bp)
