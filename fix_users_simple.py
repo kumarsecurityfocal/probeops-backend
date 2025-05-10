@@ -70,9 +70,10 @@ def fix_user_account():
                 new_email = ADMIN_EMAIL if username == 'admin' else STANDARD_EMAIL
                 
                 # Update user record
+                # password_hash field removed after schema cleanup (May 2025)
                 cursor.execute(
-                    "UPDATE users SET email = %s, hashed_password = %s, password_hash = %s WHERE id = %s",
-                    (new_email, password_hash, password_hash, user_id)
+                    "UPDATE users SET email = %s, hashed_password = %s WHERE id = %s",
+                    (new_email, password_hash, user_id)
                 )
                 
                 print(f"  Updated email to: {new_email}")

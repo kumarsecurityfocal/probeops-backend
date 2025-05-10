@@ -33,8 +33,8 @@ def verify_models():
         user_columns = User.__table__.columns.keys()
         logger.info(f"User model columns: {', '.join(user_columns)}")
         
-        # Verify compatibility fields
-        assert 'password_hash' in user_columns, "password_hash column is missing"
+        # Verify required fields
+        # password_hash field removed after schema cleanup (May 2025)
         assert 'hashed_password' in user_columns, "hashed_password column is missing"
         
         # Verify model methods
@@ -45,9 +45,8 @@ def verify_models():
         )
         
         # Check password setting
+        # password_hash field removed after schema cleanup (May 2025)
         assert test_user.hashed_password is not None, "hashed_password not set"
-        assert test_user.password_hash is not None, "password_hash not set"
-        assert test_user.password_hash == test_user.hashed_password, "password_hash and hashed_password don't match"
         
         # Check role-based admin detection
         assert not test_user.is_admin_user(), "New user should not be an admin"
