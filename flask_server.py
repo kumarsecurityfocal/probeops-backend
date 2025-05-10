@@ -182,6 +182,84 @@ def add_cors_headers(response):
         
     return response
 
+# Helper function to get rate limit configuration for a tier
+def get_rate_limit_for_tier(tier):
+    """
+    Get the rate limit configuration for a specific subscription tier
+    Returns a tuple of (daily_limit, monthly_limit, min_interval_minutes)
+    """
+    from models import RateLimitConfig, User
+    
+    # Check if we have a custom configuration in the database
+    config = RateLimitConfig.query.filter_by(tier=tier).first()
+    
+    # If no custom config, use defaults
+    if not config:
+        # Get default configs
+        defaults = {cfg['tier']: cfg for cfg in RateLimitConfig.get_default_configs()}
+        
+        # Use the default for this tier, or fall back to Free tier defaults
+        tier_config = defaults.get(tier, defaults.get(User.TIER_FREE))
+        
+        # Create entry in database for next time
+        try:
+            config = RateLimitConfig(
+                tier=tier,
+                daily_limit=tier_config['daily_limit'],
+                monthly_limit=tier_config['monthly_limit'],
+                min_interval_minutes=tier_config['min_interval_minutes']
+            )
+            db.session.add(config)
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error creating rate limit config for tier {tier}: {str(e)}")
+            db.session.rollback()
+            
+            # Return default values if database operation fails
+            return (
+                tier_config['daily_limit'], 
+                tier_config['monthly_limit'], 
+                tier_config['min_interval_minutes']
+            )
+    
+    return (config.daily_limit, config.monthly_limit, config.min_interval_minutes)
+
+# Define a function to get dynamic limits based on user's tier
+def get_dynamic_limits(endpoint_path=None):
+    """
+    Get dynamic rate limits based on current user's subscription tier
+    Returns a list of rate limit strings to apply
+    """
+    # Get current user
+    current_user = get_current_user()
+    
+    # Default limits for unauthenticated users
+    if not current_user:
+        return ["50 per day", "10 per hour"]
+    
+    # Get user's tier
+    tier = current_user.subscription_tier
+    
+    # Get limits for this tier
+    daily_limit, monthly_limit, min_interval_minutes = get_rate_limit_for_tier(tier)
+    
+    # Special adjustment for admins - they get higher limits
+    if current_user.is_admin_user():
+        daily_limit *= 2
+        monthly_limit *= 2
+        min_interval_minutes = max(1, min_interval_minutes // 2)  # At least 1 minute
+    
+    # Calculate requests per second (for minimum interval)
+    # This converts "minimum 5 minutes between requests" to "12 per hour" 
+    requests_per_hour = 60 // min_interval_minutes if min_interval_minutes > 0 else 60
+    
+    # Return list of limit strings
+    return [
+        f"{daily_limit} per day", 
+        f"{monthly_limit} per month",
+        f"{requests_per_hour} per hour"
+    ]
+
 # Define a custom rate limit key function that uses user identity when available
 def get_rate_limit_key():
     # First try to get the current user

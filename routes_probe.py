@@ -348,6 +348,54 @@ def run_whois(domain: str) -> str:
         return f"Error performing WHOIS lookup: {str(e)}"
 
 
+def check_probe_interval(user_id, probe_type):
+    """
+    Check if enough time has passed since the user's last probe of this type
+    Returns a tuple (can_proceed, error_message, wait_time_minutes)
+    """
+    if user_id is None:
+        return True, None, 0
+    
+    # Get the user's tier
+    user = User.query.get(user_id)
+    if not user:
+        return True, None, 0
+    
+    # Get the tier configuration
+    from flask_server import get_rate_limit_for_tier
+    daily_limit, monthly_limit, min_interval_minutes = get_rate_limit_for_tier(user.subscription_tier)
+    
+    # Admin users have relaxed interval requirements
+    if user.is_admin_user():
+        min_interval_minutes = max(1, min_interval_minutes // 2)  # At least 1 minute
+    
+    # Find the user's most recent probe of this type
+    last_probe = ProbeJob.query.filter_by(
+        user_id=user_id,
+        probe_type=probe_type
+    ).order_by(ProbeJob.created_at.desc()).first()
+    
+    if not last_probe:
+        # No previous probes of this type
+        return True, None, 0
+    
+    # Calculate time difference in minutes
+    now = datetime.utcnow()
+    time_diff = now - last_probe.created_at
+    minutes_passed = time_diff.total_seconds() / 60
+    
+    if minutes_passed < min_interval_minutes:
+        wait_time = min_interval_minutes - minutes_passed
+        error_message = (
+            f"Rate limit exceeded. Please wait {wait_time:.1f} more minutes before "
+            f"making another {probe_type} request. Your subscription tier "
+            f"({user.subscription_tier}) allows one request every {min_interval_minutes} minutes."
+        )
+        return False, error_message, wait_time
+    
+    return True, None, 0
+
+
 def sanitize_input(input_str: str) -> str:
     """
     Sanitize input to prevent command injection
@@ -401,9 +449,22 @@ def save_probe_job(probe_type, target, parameters, result, success=True):
 
 @bp.route("/ping", methods=["GET", "POST"])
 @login_required
-# Ping is available to all tiers
+# Ping is available to all tiers (controlled by rate limits)
 def ping_probe():
     """Run ping on a target host"""
+    # Get current user for interval check
+    current_user = get_current_user()
+    
+    # Check if enough time has passed since the last request
+    if current_user:
+        can_proceed, error_message, wait_time = check_probe_interval(current_user.id, "ping")
+        if not can_proceed:
+            return jsonify({
+                "error": "Rate limit exceeded",
+                "message": error_message,
+                "wait_time_minutes": round(wait_time, 1)
+            }), 429
+    
     if request.method == "POST":
         data = request.json or {}
         host = data.get("host")
@@ -438,9 +499,21 @@ def ping_probe():
 
 @bp.route("/traceroute", methods=["GET", "POST"])
 @login_required
-@tier_required(User.TIER_STANDARD)  # Require Standard tier or higher
 def traceroute_probe():
     """Run traceroute on a target host"""
+    # Get current user for interval check
+    current_user = get_current_user()
+    
+    # Check if enough time has passed since the last request
+    if current_user:
+        can_proceed, error_message, wait_time = check_probe_interval(current_user.id, "traceroute")
+        if not can_proceed:
+            return jsonify({
+                "error": "Rate limit exceeded",
+                "message": error_message,
+                "wait_time_minutes": round(wait_time, 1)
+            }), 429
+    
     if request.method == "POST":
         data = request.json or {}
         host = data.get("host")
@@ -475,9 +548,21 @@ def traceroute_probe():
 
 @bp.route("/dns", methods=["GET", "POST"])
 @login_required
-@tier_required(User.TIER_STANDARD)  # Require Standard tier or higher
 def dns_probe():
     """Run DNS lookup on a domain"""
+    # Get current user for interval check
+    current_user = get_current_user()
+    
+    # Check if enough time has passed since the last request
+    if current_user:
+        can_proceed, error_message, wait_time = check_probe_interval(current_user.id, "dns")
+        if not can_proceed:
+            return jsonify({
+                "error": "Rate limit exceeded",
+                "message": error_message,
+                "wait_time_minutes": round(wait_time, 1)
+            }), 429
+    
     if request.method == "POST":
         data = request.json or {}
         domain = data.get("domain")

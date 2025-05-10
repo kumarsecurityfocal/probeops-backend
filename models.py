@@ -138,6 +138,66 @@ class ApiKey(db.Model):
         return f'<ApiKey {self.key[:10]}...>'
 
 
+class RateLimitConfig(db.Model):
+    """Model for storing rate limit configurations by user tier"""
+    __tablename__ = 'rate_limit_configs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tier = db.Column(db.String(20), unique=True, nullable=False)  # Free, Standard, Enterprise
+    
+    # Daily and monthly request limits
+    daily_limit = db.Column(db.Integer, nullable=False)
+    monthly_limit = db.Column(db.Integer, nullable=False)
+    
+    # Minimum time between probe requests (in minutes)
+    min_interval_minutes = db.Column(db.Integer, nullable=False)
+    
+    # When this configuration was last updated
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses"""
+        return {
+            'id': self.id,
+            'tier': self.tier,
+            'daily_limit': self.daily_limit,
+            'monthly_limit': self.monthly_limit,
+            'min_interval_minutes': self.min_interval_minutes,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    @classmethod
+    def get_default_configs(cls):
+        """Get default rate limit configurations"""
+        return [
+            # Free tier
+            {
+                'tier': User.TIER_FREE,
+                'daily_limit': 100,
+                'monthly_limit': 1000,
+                'min_interval_minutes': 15
+            },
+            # Standard tier
+            {
+                'tier': User.TIER_STANDARD,
+                'daily_limit': 500,
+                'monthly_limit': 5000,
+                'min_interval_minutes': 5
+            },
+            # Enterprise tier
+            {
+                'tier': User.TIER_ENTERPRISE,
+                'daily_limit': 1000,
+                'monthly_limit': 10000,
+                'min_interval_minutes': 5
+            }
+        ]
+    
+    def __repr__(self):
+        return f'<RateLimitConfig {self.tier}>'
+
+
 class ProbeJob(db.Model):
     """Model for storing probe job history"""
     __tablename__ = 'probe_jobs'
