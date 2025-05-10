@@ -197,22 +197,167 @@ def register_probe_routes(bp):
     @login_required
     def ping_probe():
         """Run ping on a target host"""
-        # To be implemented
-        return jsonify({"message": "Ping probe endpoint"}), 501
+        # Import required functions
+        from probeops.services.probe import run_ping, save_probe_job, format_response
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        # Check required fields
+        host = data.get("host")
+        if not host:
+            return jsonify({"error": "Missing required parameter: host"}), 400
+            
+        # Get optional parameters with defaults
+        count = data.get("count", 4)
+        # Ensure count is an integer between 1 and 20
+        try:
+            count = int(count)
+            count = max(1, min(count, 20))  # Limit between 1 and 20
+        except (ValueError, TypeError):
+            count = 4  # Default if invalid
+            
+        parameters = {"count": count}
+        
+        try:
+            # Run the ping command
+            result = run_ping(host, count)
+            success = "Error" not in result
+            
+            # Save job to database
+            job = save_probe_job("ping", host, parameters, result, success)
+            
+            # Format the response
+            response = format_response(
+                success, 
+                "ping", 
+                host, 
+                result, 
+                job.id if job else 0
+            )
+            
+            return jsonify(response)
+        except Exception as e:
+            logger.exception(f"Error in ping probe: {str(e)}")
+            return jsonify(format_response(
+                False, 
+                "ping", 
+                host, 
+                f"Error: {str(e)}", 
+                0
+            )), 500
     
     @bp.route('/traceroute', methods=['POST'])
     @login_required
     def traceroute_probe():
         """Run traceroute on a target host"""
-        # To be implemented
-        return jsonify({"message": "Traceroute probe endpoint"}), 501
+        # Import required functions
+        from probeops.services.probe import run_traceroute, save_probe_job, format_response
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        # Check required fields
+        host = data.get("host")
+        if not host:
+            return jsonify({"error": "Missing required parameter: host"}), 400
+            
+        # Get optional parameters with defaults
+        max_hops = data.get("max_hops", 30)
+        # Ensure max_hops is an integer between 1 and 30
+        try:
+            max_hops = int(max_hops)
+            max_hops = max(1, min(max_hops, 30))  # Limit between 1 and 30
+        except (ValueError, TypeError):
+            max_hops = 30  # Default if invalid
+            
+        parameters = {"max_hops": max_hops}
+        
+        try:
+            # Run the traceroute command
+            result = run_traceroute(host, max_hops)
+            success = "Error" not in result
+            
+            # Save job to database
+            job = save_probe_job("traceroute", host, parameters, result, success)
+            
+            # Format the response
+            response = format_response(
+                success, 
+                "traceroute", 
+                host, 
+                result, 
+                job.id if job else 0
+            )
+            
+            return jsonify(response)
+        except Exception as e:
+            logger.exception(f"Error in traceroute probe: {str(e)}")
+            return jsonify(format_response(
+                False, 
+                "traceroute", 
+                host, 
+                f"Error: {str(e)}", 
+                0
+            )), 500
     
     @bp.route('/dns', methods=['POST'])
     @login_required
     def dns_probe():
         """Run DNS lookup on a domain"""
-        # To be implemented
-        return jsonify({"message": "DNS lookup endpoint"}), 501
+        # Import required functions
+        from probeops.services.probe import run_dns_lookup, save_probe_job, format_response
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        # Check required fields
+        domain = data.get("domain")
+        if not domain:
+            return jsonify({"error": "Missing required parameter: domain"}), 400
+            
+        # Get optional parameters with defaults
+        record_type = data.get("record_type", "A")
+        # Ensure record type is valid
+        valid_types = ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "SOA", "SRV", "TXT"]
+        if record_type.upper() not in valid_types:
+            record_type = "A"  # Default to A record if invalid
+            
+        parameters = {"record_type": record_type}
+        
+        try:
+            # Run the DNS lookup command
+            result = run_dns_lookup(domain, record_type)
+            success = "Error" not in result
+            
+            # Save job to database
+            job = save_probe_job("dns", domain, parameters, result, success)
+            
+            # Format the response
+            response = format_response(
+                success, 
+                "dns", 
+                domain, 
+                result, 
+                job.id if job else 0
+            )
+            
+            return jsonify(response)
+        except Exception as e:
+            logger.exception(f"Error in DNS probe: {str(e)}")
+            return jsonify(format_response(
+                False, 
+                "dns", 
+                domain, 
+                f"Error: {str(e)}", 
+                0
+            )), 500
     
     @bp.route('/whois', methods=['POST'])
     @login_required
