@@ -337,7 +337,8 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     hashed_password = db.Column(db.String(256), nullable=False) # Primary password field
     is_active = db.Column(db.Boolean, default=True)
-    is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
+    # is_admin field removed as it doesn't exist in production DB
+    # Using role field instead for admin determination
     role = db.Column(db.String(20), default=ROLE_USER)
     subscription_tier = db.Column(db.String(20), default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
