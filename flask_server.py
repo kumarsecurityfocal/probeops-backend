@@ -402,17 +402,22 @@ class User(db.Model):
         """Convert to dictionary for API responses"""
         # Need to convert relationship to a list first, then get its length
         api_keys_list = list(self.api_keys)
-        return {
+        # Create base dict with direct attributes
+        user_dict = {
             'id': self.id,
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin_user(),  # Derived from role field instead of column
-            'role': self.role,
+            'is_admin': self.is_admin,  # Use the field directly
             'subscription_tier': self.subscription_tier,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'api_key_count': len(api_keys_list)
         }
+        
+        # Add a role field based on is_admin for backwards compatibility
+        user_dict['role'] = self.ROLE_ADMIN if self.is_admin else self.ROLE_USER
+        
+        return user_dict
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -1191,8 +1196,7 @@ def setup_database():
                 username="admin",
                 email="admin@probeops.com",
                 is_active=True,
-                is_admin=True,  # Legacy field
-                role=User.ROLE_ADMIN,  # New RBAC field
+                is_admin=True,  # Set admin flag - compatible with production schema
                 subscription_tier=User.TIER_ENTERPRISE  # Default to highest tier for admin
             )
             admin.password = "administrator"  # This will be hashed
@@ -1210,9 +1214,8 @@ def setup_database():
             logger.info(f"Created default admin user with API key: {api_key.key}")
         else:
             # Update existing admin user to ensure they have admin role and enterprise tier
-            if admin.role != User.ROLE_ADMIN or admin.subscription_tier != User.TIER_ENTERPRISE:
+            if not admin.is_admin or admin.subscription_tier != User.TIER_ENTERPRISE:
                 admin.is_admin = True
-                admin.role = User.ROLE_ADMIN
                 admin.subscription_tier = User.TIER_ENTERPRISE
                 db.session.commit()
                 logger.info("Updated existing admin user with correct role and tier")
@@ -1333,7 +1336,7 @@ def api_root():
     """API root endpoint"""
     # Get current user for role-based endpoint display
     current_user = get_current_user()
-    is_admin = current_user and current_user.role == User.ROLE_ADMIN
+    is_admin = current_user and current_user.is_admin
     
     endpoints = {
         "auth": [
