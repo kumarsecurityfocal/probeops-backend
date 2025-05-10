@@ -64,7 +64,13 @@ class User(db.Model):
     
     def verify_password(self, password):
         """Check if password matches"""
-        return check_password_hash(self.password_hash, password)
+        # Try hashed_password first (which is marked NOT NULL in the DB)
+        if self.hashed_password:
+            return check_password_hash(self.hashed_password, password)
+        # Fall back to password_hash if needed
+        elif self.password_hash:
+            return check_password_hash(self.password_hash, password)
+        return False
     
     def is_admin_user(self):
         """Check if user has admin role"""
