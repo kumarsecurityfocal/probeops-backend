@@ -35,9 +35,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    # Keep both password fields for compatibility, but mainly use password_hash
+    # Only use the hashed_password field that actually exists in the database
     hashed_password = db.Column(db.String(256))
-    password_hash = db.Column(db.String(256))
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
     role = db.Column(db.String(20), default=ROLE_USER)
@@ -58,18 +57,14 @@ class User(db.Model):
         """Set password hash"""
         # Generate the password hash
         hash_value = generate_password_hash(password)
-        # Set both hash fields for compatibility
-        self.password_hash = hash_value
+        # Only set the hashed_password field
         self.hashed_password = hash_value
     
     def verify_password(self, password):
         """Check if password matches"""
-        # Try hashed_password first (which is marked NOT NULL in the DB)
+        # Only use hashed_password which exists in the database
         if self.hashed_password:
             return check_password_hash(self.hashed_password, password)
-        # Fall back to password_hash if needed
-        elif self.password_hash:
-            return check_password_hash(self.password_hash, password)
         return False
     
     def is_admin_user(self):
