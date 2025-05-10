@@ -32,12 +32,20 @@ class User(db.Model):
     # Valid user roles
     VALID_ROLES = [ROLE_USER, ROLE_ADMIN]
     
+    # Tell SQLAlchemy to only load specific columns
+    __mapper_args__ = {
+        'column_prefix': '_',
+        'include_properties': ['id', 'username', 'email', 'hashed_password', 'is_active', 
+                             'is_admin', 'role', 'subscription_tier', 'created_at']
+    }
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    # Both fields exist in the actual database schema
+    # Only include the primary password field in queries
     hashed_password = db.Column(db.String(256), nullable=False)
-    password_hash = db.Column(db.String(256))
+    # Don't include password_hash in model queries, but it still exists in DB
+    # password_hash = db.Column(db.String(256))
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
     role = db.Column(db.String(20), default=ROLE_USER)
@@ -58,18 +66,23 @@ class User(db.Model):
         """Set password hash"""
         # Generate the password hash
         hash_value = generate_password_hash(password)
-        # Set both password fields since both exist in the database
+        # Only set hashed_password since we're not using password_hash in queries
         self.hashed_password = hash_value
-        self.password_hash = hash_value
+        
+        # Manual SQL update to set password_hash in the database directly
+        # This avoids SQLAlchemy trying to select the column in queries
+        with db.engine.connect() as conn:
+            conn.execute(
+                db.text("UPDATE users SET password_hash = :hash WHERE id = :id"),
+                {"hash": hash_value, "id": self.id if self.id else 0}
+            )
+            conn.commit()
     
     def verify_password(self, password):
         """Check if password matches"""
-        # Try hashed_password first
+        # Only use hashed_password since we're not loading password_hash
         if self.hashed_password:
             return check_password_hash(self.hashed_password, password)
-        # If not, try password_hash as fallback
-        elif self.password_hash:
-            return check_password_hash(self.password_hash, password)
         return False
     
     def is_admin_user(self):

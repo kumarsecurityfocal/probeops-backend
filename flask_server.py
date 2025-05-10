@@ -327,12 +327,20 @@ class User(db.Model):
     
     # Valid user roles
     VALID_ROLES = [ROLE_USER, ROLE_ADMIN]
+
+    # Tell SQLAlchemy to only load specific columns
+    __mapper_args__ = {
+        'column_prefix': '_',
+        'include_properties': ['id', 'username', 'email', 'hashed_password', 'is_active', 
+                             'is_admin', 'role', 'subscription_tier', 'created_at']
+    }
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     hashed_password = db.Column(db.String(256), nullable=False) # Primary password field
-    password_hash = db.Column(db.String(256)) # Secondary password field
+    # Don't include password_hash in model queries, but it still exists in DB
+    # password_hash = db.Column(db.String(256)) # Secondary password field
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
     role = db.Column(db.String(20), default=ROLE_USER)
