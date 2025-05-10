@@ -570,6 +570,6 @@ def admin_status():
     """Admin status endpoint"""
     # Import server_status directly from flask_server to avoid SQLAlchemy context issues
     from flask_server import server_status
-    
+
     # Just proxy to the original server_status function
     return server_status()
