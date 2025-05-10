@@ -29,7 +29,8 @@ def fix_user_account():
         cursor = conn.cursor()
         
         # Step 1: Find existing users
-        cursor.execute("SELECT id, username, email, hashed_password, password_hash FROM users WHERE username IN ('admin', 'standard')")
+        # password_hash field removed after schema cleanup (May 2025)
+        cursor.execute("SELECT id, username, email, hashed_password FROM users WHERE username IN ('admin', 'standard')")
         users = cursor.fetchall()
         
         if not users:
@@ -43,7 +44,8 @@ def fix_user_account():
         
         # Step 2: Update each user
         for user in users:
-            user_id, username, email, hashed_password, password_hash_field = user
+            # password_hash field removed after schema cleanup (May 2025)
+            user_id, username, email, hashed_password = user
             
             print(f"User ID: {user_id}, Username: {username}")
             print(f"  Current email: {email or 'None'}")
@@ -62,8 +64,8 @@ def fix_user_account():
             updates.append("hashed_password = %s")
             params.append(password_hash)
             
-            updates.append("password_hash = %s")
-            params.append(password_hash)
+            # password_hash field removed after schema cleanup (May 2025)
+            # No need to update the removed field
             
             # Add user_id as the last parameter
             params.append(user_id)

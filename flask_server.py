@@ -376,18 +376,8 @@ class User(db.Model):
         # Set hashed_password
         self.hashed_password = hash_value
         
-        # Update the password_hash field with raw SQL after save
-        # This is needed because the field exists in the database but not in the model
-        if self.id:
-            try:
-                db.session.execute(
-                    db.text("UPDATE users SET password_hash = :hash WHERE id = :id"),
-                    {"hash": hash_value, "id": self.id}
-                )
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                print(f"Failed to update password_hash: {e}")
+        # password_hash field removed after schema cleanup (May 2025)
+        # No need to update the removed field
                 
     def verify_password(self, password):
         """Check if password matches"""
@@ -408,12 +398,8 @@ class User(db.Model):
                     # If verification fails, continue to other methods
                     pass
         
-        # Fall back to password_hash column for compatibility
-        if hasattr(self, 'password_hash') and self.password_hash:
-            try:
-                return check_password_hash(self.password_hash, password)
-            except Exception:
-                pass
+        # password_hash field removed after schema cleanup (May 2025)
+        # Legacy compatibility check removed
                 
         return False
     
