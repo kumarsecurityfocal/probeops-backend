@@ -406,7 +406,7 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin,  # Legacy field, kept for backward compatibility
+            'is_admin': self.is_admin_user(),  # Derived from role field instead of column
             'role': self.role,
             'subscription_tier': self.subscription_tier,
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -1488,7 +1488,7 @@ def list_apikeys():
     """List API keys for the current user"""
     current_user = get_current_user()
     # Admin can see all keys with user information
-    if current_user.is_admin and request.args.get("all") == "true":
+    if current_user.is_admin_user() and request.args.get("all") == "true":
         keys = ApiKey.query.all()
         return jsonify({
             "api_keys": [{
