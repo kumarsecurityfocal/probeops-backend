@@ -13,7 +13,7 @@ def register_routes(app):
     api_bp = Blueprint('api', __name__, url_prefix='/api')
     auth_bp = Blueprint('auth', __name__, url_prefix='/api/users')
     admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
-    probe_bp = Blueprint('probe', __name__, url_prefix='/api/probe')
+    probe_bp = Blueprint('probe', __name__, url_prefix='/api/probes')
     apikey_bp = Blueprint('apikey', __name__, url_prefix='/api/apikeys')
     
     # Register routes in each blueprint
