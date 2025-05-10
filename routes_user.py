@@ -42,7 +42,9 @@ def register():
             username=data["username"],
             email=data["email"],
             is_active=True,
-            is_admin=False
+            is_admin=False,  # Legacy field, kept for backward compatibility
+            role=User.ROLE_USER,  # Default to regular user role
+            subscription_tier=User.TIER_FREE  # Default to free tier
         )
         user.password = data["password"]  # This will be hashed
         
@@ -157,6 +159,25 @@ def update_user(user_id):
         user.is_active = data["is_active"]
     if "is_admin" in data:
         user.is_admin = data["is_admin"]
+        # Also update the role field for consistency with legacy field
+        if data["is_admin"]:
+            user.role = User.ROLE_ADMIN
+        else:
+            user.role = User.ROLE_USER
+    if "role" in data:
+        if data["role"] not in User.VALID_ROLES:
+            return jsonify({
+                "error": f"Invalid role. Must be one of: {', '.join(User.VALID_ROLES)}"
+            }), 400
+        user.role = data["role"]
+        # Also update the is_admin field for backward compatibility
+        user.is_admin = (data["role"] == User.ROLE_ADMIN)
+    if "subscription_tier" in data:
+        if data["subscription_tier"] not in User.VALID_TIERS:
+            return jsonify({
+                "error": f"Invalid subscription tier. Must be one of: {', '.join(User.VALID_TIERS)}"
+            }), 400
+        user.subscription_tier = data["subscription_tier"]
     
     try:
         db.session.commit()

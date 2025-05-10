@@ -59,6 +59,8 @@ def create_jwt_token(user):
     payload = {
         "sub": user.id,
         "username": user.username,
+        "role": user.role,
+        "tier": user.subscription_tier,
         "exp": datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION),
         "iat": datetime.utcnow()
     }
@@ -121,10 +123,54 @@ def admin_required(f):
                 "error": "Authentication required", 
                 "message": "Please provide a valid JWT token or API key."
             }), 401
-        if not current_user.is_admin:
+        
+        # Check both legacy is_admin flag and new role field
+        if not current_user.is_admin and current_user.role != User.ROLE_ADMIN:
             return jsonify({
                 "error": "Forbidden", 
                 "message": "Admin privileges required."
             }), 403
         return f(*args, **kwargs)
     return decorated
+
+
+def role_required(role):
+    """Decorator to require a specific role"""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if not current_user:
+                return jsonify({
+                    "error": "Authentication required", 
+                    "message": "Please provide a valid JWT token or API key."
+                }), 401
+            
+            if current_user.role != role:
+                return jsonify({
+                    "error": "Forbidden", 
+                    "message": f"Role '{role}' required."
+                }), 403
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+
+def tier_required(tier):
+    """Decorator to require a specific subscription tier or higher"""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if not current_user:
+                return jsonify({
+                    "error": "Authentication required", 
+                    "message": "Please provide a valid JWT token or API key."
+                }), 401
+            
+            if not current_user.has_tier(tier):
+                return jsonify({
+                    "error": "Upgrade Required", 
+                    "message": f"Subscription tier '{tier}' or higher required."
+                }), 402
+            return f(*args, **kwargs)
+        return decorated
+    return decorator

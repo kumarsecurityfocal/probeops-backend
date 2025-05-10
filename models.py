@@ -60,16 +60,37 @@ class User(db.Model):
         """Check if password matches"""
         return check_password_hash(self.password_hash, password)
     
+    def is_admin_user(self):
+        """Check if user has admin role"""
+        return self.role == self.ROLE_ADMIN
+    
+    def has_tier(self, tier):
+        """Check if user has a specific subscription tier or higher"""
+        tier_levels = {
+            self.TIER_FREE: 0,
+            self.TIER_STANDARD: 1,
+            self.TIER_ENTERPRISE: 2
+        }
+        
+        user_tier_level = tier_levels.get(self.subscription_tier, 0)
+        required_tier_level = tier_levels.get(tier, 0)
+        
+        return user_tier_level >= required_tier_level
+    
     def to_dict(self):
         """Convert to dictionary for API responses"""
+        # Need to convert relationship to a list first, then get its length
+        api_keys_list = list(self.api_keys)
         return {
             'id': self.id,
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
-            'is_admin': self.is_admin,
+            'is_admin': self.is_admin,  # Legacy field, kept for backward compatibility
+            'role': self.role,
+            'subscription_tier': self.subscription_tier,
             'created_at': self.created_at.isoformat(),
-            'api_key_count': len(self.api_keys)
+            'api_key_count': len(api_keys_list)
         }
     
     def __repr__(self):
