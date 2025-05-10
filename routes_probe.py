@@ -8,10 +8,15 @@ import random
 import logging
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 
-from models import db, ProbeJob
-from auth import login_required, current_user
+# Import directly from flask_server (which is the primary implementation)
+from flask_server import db, User, ProbeJob, login_required, admin_required, role_required, tier_required
+
+# Helper function to get current user
+def get_current_user():
+    """Utility to get current user from g"""
+    return g.current_user if hasattr(g, 'current_user') else None
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -373,6 +378,7 @@ def format_response(
 
 def save_probe_job(probe_type, target, parameters, result, success=True):
     """Save probe job to database"""
+    current_user = get_current_user()
     if current_user:
         try:
             job = ProbeJob(
@@ -394,6 +400,7 @@ def save_probe_job(probe_type, target, parameters, result, success=True):
 
 @bp.route("/ping", methods=["GET", "POST"])
 @login_required
+# Ping is available to all tiers
 def ping_probe():
     """Run ping on a target host"""
     if request.method == "POST":
@@ -430,6 +437,7 @@ def ping_probe():
 
 @bp.route("/traceroute", methods=["GET", "POST"])
 @login_required
+@tier_required(User.TIER_STANDARD)  # Require Standard tier or higher
 def traceroute_probe():
     """Run traceroute on a target host"""
     if request.method == "POST":
@@ -466,6 +474,7 @@ def traceroute_probe():
 
 @bp.route("/dns", methods=["GET", "POST"])
 @login_required
+@tier_required(User.TIER_STANDARD)  # Require Standard tier or higher
 def dns_probe():
     """Run DNS lookup on a domain"""
     if request.method == "POST":
@@ -538,6 +547,7 @@ def whois_probe():
 @login_required
 def probe_history():
     """Get probe job history for the current user"""
+    current_user = get_current_user()
     probe_type = request.args.get("probe_type")
     limit = int(request.args.get("limit", 20))
     offset = int(request.args.get("offset", 0))

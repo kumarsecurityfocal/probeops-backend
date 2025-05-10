@@ -101,8 +101,10 @@ def get_apikey(key_id):
 @login_required
 def update_apikey(key_id):
     """Update API key"""
+    current_user = get_current_user()
+    
     # Admin can update any key
-    if current_user.is_admin:
+    if current_user.is_admin_user():
         key = ApiKey.query.get(key_id)
     else:
         # Regular users can only update their own keys
@@ -135,8 +137,10 @@ def update_apikey(key_id):
 @login_required
 def delete_apikey(key_id):
     """Delete API key"""
+    current_user = get_current_user()
+    
     # Admin can delete any key
-    if current_user.is_admin:
+    if current_user.is_admin_user():
         key = ApiKey.query.get(key_id)
     else:
         # Regular users can only delete their own keys
