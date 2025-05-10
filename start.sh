@@ -53,16 +53,13 @@ echo "- Workers: ${WORKERS:-4}"
 echo "- Timeout: ${WORKER_TIMEOUT:-120}s"
 echo "- Keepalive: ${KEEPALIVE:-5}s"
 
-# Run database migrations or initialization
+# Set Flask application for migrations
+export FLASK_APP=main:app
+
+# Run database migrations
 echo "Setting up database tables..."
-# Check if flask db command is available (Flask-Migrate)
-if python -m flask db --help > /dev/null 2>&1; then
-    echo "Running migrations with Flask-Migrate..."
-    python -m flask db upgrade
-else
-    echo "Flask-Migrate not available, falling back to manual schema creation..."
-    python -c "from main import app, db; app.app_context().push(); db.create_all()"
-fi
+echo "Running migrations with Flask-Migrate..."
+flask db upgrade
 echo "Database setup complete."
 
 # Determine number of workers based on environment or CPU cores

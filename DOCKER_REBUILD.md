@@ -9,12 +9,27 @@ Rebuild the Docker container when:
 2. You make changes to the Dockerfile
 3. You need to reset the environment due to issues
 
-## Automated Rebuild
+## Automated Rebuild & Migration
 
-Use the provided script to automatically rebuild the Docker containers:
+Use the provided script to automatically rebuild the Docker containers and run migrations:
 
 ```bash
-./rebuild_docker.sh
+./update-backend.sh
+```
+
+This script will:
+1. Stop existing containers
+2. Rebuild with the latest code
+3. Start the containers
+4. Create migration files if schema changes are detected
+5. Apply all pending migrations
+
+## Migration Testing
+
+To verify the Flask-Migrate setup is working:
+
+```bash
+./test-migrations.sh
 ```
 
 ## Manual Rebuild Steps
@@ -41,8 +56,9 @@ docker compose -f docker-compose.backend.yml up -d
 docker compose -f docker-compose.backend.yml ps
 ```
 
-5. Run database migrations:
+5. Create and run database migrations:
 ```bash
+docker compose -f docker-compose.backend.yml exec api flask db migrate -m "Schema changes"
 docker compose -f docker-compose.backend.yml exec api flask db upgrade
 ```
 
@@ -55,11 +71,26 @@ docker compose -f docker-compose.backend.yml logs api
 ```
 
 ### Database Migration Issues
-If migrations fail, you may need to create a new migration:
+If migrations fail, you might need to troubleshoot:
+
+1. Check migration history:
 ```bash
-docker compose -f docker-compose.backend.yml exec api flask db migrate -m "description"
-docker compose -f docker-compose.backend.yml exec api flask db upgrade
+docker compose -f docker-compose.backend.yml exec api flask db history
 ```
+
+2. Get current migration version:
+```bash
+docker compose -f docker-compose.backend.yml exec api flask db current
+```
+
+3. For schema conflicts, you may need to manually modify the migration file in migrations/versions/ before upgrading.
+
+### Missing Columns Issues
+If you see errors about missing columns like `users.password_hash` or `users.is_admin`, ensure:
+
+1. Your migration files have been created properly
+2. You've run the flask db upgrade command
+3. The start.sh script is properly setting FLASK_APP and running migrations
 
 ### Network Issues
 If containers can't connect to each other, check the network:
