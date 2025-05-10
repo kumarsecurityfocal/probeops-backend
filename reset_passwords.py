@@ -48,11 +48,9 @@ def reset_passwords(new_password="probeopS1@"):
         
         # Update admin password if user exists
         if admin_user:
-            # Update both password fields to ensure compatibility
+            # Update password hash field
             if hasattr(admin_user, 'hashed_password'):
                 admin_user.hashed_password = generate_password_hash(new_password)
-            if hasattr(admin_user, 'password_hash'):
-                admin_user.password_hash = generate_password_hash(new_password)
             # Use password setter if available
             try:
                 admin_user.password = new_password
@@ -66,11 +64,9 @@ def reset_passwords(new_password="probeopS1@"):
         
         # Update standard user password if user exists
         if standard_user:
-            # Update both password fields to ensure compatibility
+            # Update password hash field
             if hasattr(standard_user, 'hashed_password'):
                 standard_user.hashed_password = generate_password_hash(new_password)
-            if hasattr(standard_user, 'password_hash'):
-                standard_user.password_hash = generate_password_hash(new_password)
             # Use password setter if available
             try:
                 standard_user.password = new_password

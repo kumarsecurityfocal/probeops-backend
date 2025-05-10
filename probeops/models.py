@@ -79,14 +79,6 @@ class User(db.Model):
             except Exception as e:
                 logger.warning(f"Failed to verify with bcrypt: {e}")
         
-        # Try password_hash field if it exists
-        if self.password_hash:
-            try:
-                if check_password_hash(self.password_hash, password):
-                    return True
-            except Exception as e:
-                logger.warning(f"Failed to verify with password_hash: {e}")
-        
         return False
     
     def is_admin_user(self):
