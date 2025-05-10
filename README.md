@@ -92,6 +92,35 @@ docker-compose -f docker-compose.backend.yml up -d
 
 The startup script includes database waiting, table creation, and automatic worker scaling based on available CPU cores.
 
+### Running Flask CLI Commands
+
+A convenient helper script is provided to run Flask CLI commands inside the Docker container:
+
+```bash
+# View all API routes
+./flask-cli.sh routes
+
+# Apply database migrations
+./flask-cli.sh db upgrade
+
+# Create a new migration
+./flask-cli.sh db migrate -m "Add new field"
+
+# Check database migration status
+./flask-cli.sh db current
+
+# Start an interactive Python shell
+./flask-cli.sh shell
+```
+
+You can also run commands directly:
+
+```bash
+docker compose -f docker-compose.backend.yml exec api flask --app main:app routes
+```
+
+See [DOCKER_REBUILD.md](DOCKER_REBUILD.md) for more details on database migrations and container management.
+
 ## Frontend Integration
 
 ### Configuration

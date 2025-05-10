@@ -53,8 +53,13 @@ echo "- Workers: ${WORKERS:-4}"
 echo "- Timeout: ${WORKER_TIMEOUT:-120}s"
 echo "- Keepalive: ${KEEPALIVE:-5}s"
 
-# Set Flask application for migrations
-export FLASK_APP=main:app
+# Set Flask application for migrations if not already set
+if [ -z "${FLASK_APP}" ]; then
+    echo "WARNING: FLASK_APP environment variable was not set. Setting to main:app as fallback."
+    export FLASK_APP=main:app
+else
+    echo "Using FLASK_APP=${FLASK_APP}"
+fi
 
 # Run database migrations
 echo "Setting up database tables..."
