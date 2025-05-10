@@ -42,7 +42,11 @@ def root():
             "/api/users/register": "Register a new user",
             "/api/users/login": "Login and get JWT token",
             "/api/users/me": "Get current user info",
-            "/api/apikeys": "Manage API keys"
+            "/api/apikeys": "Manage API keys",
+            "/api/admin/login": "Admin login endpoint",
+            "/api/admin/users/{id}/promote": "Promote user to admin role",
+            "/api/admin/users/{id}/tier": "Update user subscription tier",
+            "/api/admin/status": "View admin dashboard"
         },
         "documentation": "https://docs.probeops.com/api"
     })
