@@ -1,73 +1,35 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=65.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "probeops-api"
+name = "probeops"
 version = "1.0.0"
-description = "ProbeOps API - Network Diagnostics API with Authentication"
+description = "Network Diagnostics API with JWT Authentication and API Keys"
+requires-python = ">=3.10"
+license = "MIT"
 authors = [
-    {name = "ProbeOps Team", email = "info@probeops.com"}
-]
-readme = "README.md"
-requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: System Administrators",
-    "Topic :: System :: Networking :: Monitoring",
+    { name = "ProbeOps Team" }
 ]
 dependencies = [
-    "flask>=2.3.0",
-    "flask-cors>=4.0.0",
-    "flask-limiter>=3.5.0",
-    "flask-sqlalchemy>=3.1.0",
-    "gunicorn>=21.2.0",
-    "passlib>=1.7.4",
-    "psycopg2-binary>=2.9.9",
-    "python-dotenv>=1.0.0",
-    "pyjwt>=2.8.0",
+    "flask>=2.2.0",
+    "flask-cors>=3.0.0",
+    "flask-limiter>=3.3.0",
+    "flask-sqlalchemy>=3.0.0",
+    "flask-migrate>=4.0.0",
+    "psycopg2-binary>=2.9.0",
+    "pyjwt>=2.6.0",
+    "passlib>=1.7.0",
+    "werkzeug>=2.2.0",
+    "python-dotenv>=0.20.0",
     "sqlalchemy>=2.0.0",
-    "werkzeug>=2.3.0",
-    "requests>=2.31.0",
+    "gunicorn>=21.0.0",
+    "requests>=2.20.0"
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black>=23.1.0",
-    "flake8>=6.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.3.0",
-    "pre-commit>=3.3.1",
-    "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
-]
+[tool.setuptools]
+packages = ["probeops"]
+script-files = ["manage.py"]
 
-[tool.black]
-line-length = 100
-target-version = ["py39"]
-
-[tool.isort]
-profile = "black"
-line_length = 100
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-addopts = "--verbose --cov=. --cov-report=term"
-markers = [
-    "unit: mark a test as a unit test",
-    "integration: mark a test as an integration test",
-    "api: mark a test as an API test",
-]
+[tool.setuptools.package-data]
+"*" = ["*.md"]
