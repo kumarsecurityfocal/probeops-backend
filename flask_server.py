@@ -1118,8 +1118,8 @@ from routes_admin import bp as admin_bp
 
 # Register the blueprints with the app
 app.register_blueprint(api_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(ui_blueprint)
-app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
 # Create proxied Blueprint routes
 # This creates duplicate routes under /api prefix for compatibility
