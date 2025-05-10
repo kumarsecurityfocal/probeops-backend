@@ -140,6 +140,15 @@ wheels = [
 ]
 
 [[package]]
+name = "defusedxml"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69", size = 75520 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61", size = 25604 },
+]
+
+[[package]]
 name = "deprecated"
 version = "1.2.18"
 source = { registry = "https://pypi.org/simple" }
@@ -149,6 +158,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/98/97/06afe62762c9a8a86af0cfb7bfdab22a43ad17138b07af5b1a58442690a2/deprecated-1.2.18.tar.gz", hash = "sha256:422b6f6d859da6f2ef57857761bfb392480502a64c3028ca9bbe86085d72115d", size = 2928744 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6e/c6/ac0b6c1e2d138f1002bcf799d330bd6d85084fece321e662a14223794041/Deprecated-1.2.18-py2.py3-none-any.whl", hash = "sha256:bd5011788200372a32418f888e326a09ff80d0214bd961147cfed01b5c018eec", size = 9998 },
+]
+
+[[package]]
+name = "dnspython"
+version = "2.7.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/4a/263763cb2ba3816dd94b08ad3a33d5fdae34ecb856678773cc40a3605829/dnspython-2.7.0.tar.gz", hash = "sha256:ce9c432eda0dc91cf618a5cedf1a4e142651196bbcd2c80e89ed5a907e5cfaf1", size = 345197 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/1b/e0a87d256e40e8c888847551b20a017a6b98139178505dc7ffb96f04e954/dnspython-2.7.0-py3-none-any.whl", hash = "sha256:b4c34b7d10b51bcc3a5071e7b8dee77939f1e878477eeecc965e9835f63c6c86", size = 313632 },
 ]
 
 [[package]]
@@ -328,6 +346,19 @@ wheels = [
 ]
 
 [[package]]
+name = "ipwhois"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "defusedxml" },
+    { name = "dnspython" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ed/e9/f1dd533366b5809494d0ee0d39db2e0806388c52c25b1dcff2e0794a51d8/ipwhois-1.3.0.tar.gz", hash = "sha256:11d59784b6350210c33e12301cc50cd1ebfbb0b12a7b0f97916e11d6661c4d5d", size = 103721 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/86/44183c90cb0103c400f0fde3042b7566a936479dc00b6de139dc34198d58/ipwhois-1.3.0-py2.py3-none-any.whl", hash = "sha256:ad2cd7e7b8c81044fc8829bb4357bce6088c654a20f51f5d234fe6a99e0fbf90", size = 70676 },
+]
+
+[[package]]
 name = "itsdangerous"
 version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -485,6 +516,8 @@ name = "probeops"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
+    { name = "dnspython" },
     { name = "fastapi" },
     { name = "flask" },
     { name = "flask-cors" },
@@ -492,6 +525,7 @@ dependencies = [
     { name = "flask-migrate" },
     { name = "flask-sqlalchemy" },
     { name = "gunicorn" },
+    { name = "ipwhois" },
     { name = "passlib" },
     { name = "psycopg2-binary" },
     { name = "pyjwt" },
@@ -504,6 +538,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "click", specifier = ">=8.1.8" },
+    { name = "dnspython", specifier = ">=2.7.0" },
     { name = "fastapi", specifier = ">=0.115.12" },
     { name = "flask", specifier = ">=2.2.0" },
     { name = "flask-cors", specifier = ">=3.0.0" },
@@ -511,6 +547,7 @@ requires-dist = [
     { name = "flask-migrate", specifier = ">=4.0.0" },
     { name = "flask-sqlalchemy", specifier = ">=3.0.0" },
     { name = "gunicorn", specifier = ">=21.0.0" },
+    { name = "ipwhois", specifier = ">=1.3.0" },
     { name = "passlib", specifier = ">=1.7.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.0" },
     { name = "pyjwt", specifier = ">=2.6.0" },

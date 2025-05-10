@@ -1,6 +1,7 @@
 README.md
 manage.py
 pyproject.toml
+probeops/README.md
 probeops/__init__.py
 probeops/app.py
 probeops/models.py
