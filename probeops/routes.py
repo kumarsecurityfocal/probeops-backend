@@ -157,8 +157,22 @@ def register_auth_routes(bp):
     @login_required
     def get_current_user_info():
         """Get current user information"""
-        # To be implemented
-        return jsonify({"message": "Current user endpoint"}), 501
+        # Import at function level to avoid circular imports
+        from probeops.services.auth import get_current_user
+        
+        # Get the current user
+        current_user = get_current_user()
+        
+        # Return user info
+        return jsonify({
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "role": current_user.role,
+            "subscription_tier": current_user.subscription_tier,
+            "is_active": current_user.is_active,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+        }), 200
 
 
 def register_admin_routes(bp):
