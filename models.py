@@ -7,13 +7,31 @@ import uuid
 from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
+from flask import current_app
+from sqlalchemy import text
 from passlib.hash import bcrypt_sha256
 from werkzeug.security import generate_password_hash, check_password_hash
 
-db = SQLAlchemy()
+# We need to handle circular imports carefully
+# This is a placeholder for the db instance that will be provided by flask_server
+db = None
+
+# This function will be called by flask_server.py to set the db instance
+def init_db(db_instance):
+    global db
+    db = db_instance
+
+# Use a base model to allow models to be defined before db is initialized
+# This will be the parent class for all models
+class Model:
+    """
+    Base model class that flask_server will use as parent for SQLAlchemy models
+    This allows these models to be defined before db is initialized
+    """
+    pass
 
 
-class User(db.Model):
+class User(Model):
     """User model for authentication"""
     __tablename__ = 'users'
     
