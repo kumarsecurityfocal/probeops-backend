@@ -61,7 +61,7 @@ if python -m flask db --help > /dev/null 2>&1; then
     python -m flask db upgrade
 else
     echo "Flask-Migrate not available, falling back to manual schema creation..."
-    python -c "from flask_server import app, db; app.app_context().push(); db.create_all()"
+    python -c "from main import app, db; app.app_context().push(); db.create_all()"
 fi
 echo "Database setup complete."
 
