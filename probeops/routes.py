@@ -43,6 +43,17 @@ def register_routes(app):
         """Health check endpoint"""
         return jsonify({"status": "ok"})
     
+    # Root route redirects to API root
+    @app.route('/')
+    def root():
+        """Redirect root to API documentation"""
+        return jsonify({
+            "name": "ProbeOps API",
+            "version": "1.0.0",
+            "message": "Welcome to ProbeOps API",
+            "api_root": "/api"
+        })
+    
     # Register all blueprints with the app
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
