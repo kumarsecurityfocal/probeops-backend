@@ -86,25 +86,31 @@ class User(Model):
         """Check if password matches"""
         # If no password hash is set, verification fails
         if not self.hashed_password:
+            logger.warning(f"Password verification failed for user {self.username}: No hash set")
             return False
             
-        # Check if it's a bcrypt hash - our preferred format
-        if self.hashed_password.startswith('$2b$'):
-            try:
-                return bcrypt_sha256.verify(password, self.hashed_password)
-            except Exception as e:
-                # Log the specific error but don't expose it
-                logger.error(f"Bcrypt verification error: {str(e)}")
-                return False
-                
-        # Check if it's a werkzeug hash - legacy but still supported
-        else:
-            try:
+        try:
+            # For werkzeug's standard formats (pbkdf2, scrypt)
+            if self.hashed_password.startswith(('pbkdf2:', 'scrypt:')):
+                logger.debug(f"Verifying with werkzeug for user {self.username}")
                 return check_password_hash(self.hashed_password, password)
-            except Exception as e:
-                # Log the specific error but don't expose it  
-                logger.error(f"Werkzeug verification error: {str(e)}")
-                return False
+            # For bcrypt hashes
+            elif self.hashed_password.startswith('$2'):
+                # Import bcrypt directly to handle native bcrypt hashes
+                import bcrypt
+                logger.debug(f"Verifying with bcrypt for user {self.username}")
+                # Convert strings to bytes for bcrypt
+                encoded_password = password.encode('utf-8')
+                encoded_hash = self.hashed_password.encode('utf-8')
+                return bcrypt.checkpw(encoded_password, encoded_hash)
+            # For any other hash type
+            else:
+                logger.debug(f"Fallback to werkzeug for user {self.username}")
+                return check_password_hash(self.hashed_password, password)
+        except Exception as e:
+            # Log the specific error but don't expose it
+            logger.error(f"Password verification error for user {self.username}: {str(e)}")
+            return False
     
     def is_admin_user(self):
         """Check if user has admin role"""

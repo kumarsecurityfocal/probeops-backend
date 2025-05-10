@@ -2,7 +2,7 @@ modules = ["python-3.11", "python3", "postgresql-16"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["bind", "cacert", "curl", "dig", "iana-etc", "iputils", "libxcrypt", "openssl", "postgresql", "traceroute", "whois"]
+packages = ["bind", "cacert", "cargo", "curl", "dig", "iana-etc", "iputils", "libiconv", "libxcrypt", "openssl", "postgresql", "rustc", "traceroute", "whois"]
 
 [deployment]
 deploymentTarget = "autoscale"
