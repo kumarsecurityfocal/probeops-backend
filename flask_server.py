@@ -1175,6 +1175,11 @@ def proxy_admin_login():
     from routes_admin import admin_login
     return admin_login()
 
+@api_proxy_bp.route('/admin/users/<int:user_id>/role', methods=["POST"])
+def proxy_update_user_role(user_id):
+    from routes_admin import update_user_role
+    return update_user_role(user_id)
+
 @api_proxy_bp.route('/admin/users/<int:user_id>/promote', methods=["POST"])
 def proxy_promote_user(user_id):
     from routes_admin import promote_user
@@ -1184,6 +1189,21 @@ def proxy_promote_user(user_id):
 def proxy_update_subscription_tier(user_id):
     from routes_admin import update_subscription_tier
     return update_subscription_tier(user_id)
+
+@api_proxy_bp.route('/admin/users/<int:user_id>/status', methods=["POST"])
+def proxy_toggle_user_active_status(user_id):
+    from routes_admin import toggle_user_active_status
+    return toggle_user_active_status(user_id)
+
+@api_proxy_bp.route('/admin/users', methods=["GET"])
+def proxy_list_all_users():
+    from routes_admin import list_all_users
+    return list_all_users()
+
+@api_proxy_bp.route('/admin/users/<int:user_id>', methods=["GET"])
+def proxy_get_user_details(user_id):
+    from routes_admin import get_user_details
+    return get_user_details(user_id)
 
 @api_proxy_bp.route('/admin/status', methods=["GET"])
 def proxy_admin_status():
@@ -1198,29 +1218,50 @@ app.register_blueprint(api_proxy_bp)
 @app.route('/api')
 def api_root():
     """API root endpoint"""
+    # Get current user for role-based endpoint display
+    current_user = get_current_user()
+    is_admin = current_user and current_user.role == User.ROLE_ADMIN
+    
+    endpoints = {
+        "auth": [
+            "/users/register",
+            "/users/login",
+            "/users/me"
+        ],
+        "api_keys": [
+            "/apikeys"
+        ],
+        "probes": [
+            "/probes/ping",
+            "/probes/traceroute",
+            "/probes/dns",
+            "/probes/whois",
+            "/probes/history"
+        ]
+    }
+    
+    # Add admin endpoints if user has admin role
+    if is_admin:
+        endpoints["admin"] = [
+            "/admin/login",
+            "/admin/status",
+            "/admin/users",
+            "/admin/users/{user_id}",
+            "/admin/users/{user_id}/role",
+            "/admin/users/{user_id}/tier",
+            "/admin/users/{user_id}/status",
+            "/admin/users/{user_id}/promote"
+        ]
+    
     return jsonify({
         "name": "ProbeOps API",
         "version": "1.0.0",
         "status": "online",
-        "authenticated": get_current_user() is not None,
-        "user": get_current_user().username if get_current_user() else None,
-        "endpoints": {
-            "auth": [
-                "/users/register",
-                "/users/login",
-                "/users/me"
-            ],
-            "api_keys": [
-                "/apikeys"
-            ],
-            "probes": [
-                "/probes/ping",
-                "/probes/traceroute",
-                "/probes/dns",
-                "/probes/whois",
-                "/probes/history"
-            ]
-        }
+        "authenticated": current_user is not None,
+        "user": current_user.username if current_user else None,
+        "role": current_user.role if current_user else None,
+        "subscription_tier": current_user.subscription_tier if current_user else None,
+        "endpoints": endpoints
     })
 
 
