@@ -17,24 +17,53 @@ depends_on = None
 
 
 def upgrade():
-    # Add compatibility columns if they don't exist
+    """Add compatibility columns and copy data"""
     
-    # Check if password_hash column exists, if not add it
+    # First, check if the password_hash column exists to avoid errors if already migrated
     conn = op.get_bind()
     inspector = sa.inspect(conn)
-    columns = [col['name'] for col in inspector.get_columns('users')]
+    has_password_hash = False
+    has_is_admin = False
     
-    if 'password_hash' not in columns:
-        with op.batch_alter_table('users', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('password_hash', sa.String(256), nullable=True))
-            # Copy data from hashed_password to password_hash for compatibility
-            conn.execute(sa.text('UPDATE users SET password_hash = hashed_password'))
+    for column in inspector.get_columns('users'):
+        if column['name'] == 'password_hash':
+            has_password_hash = True
+        if column['name'] == 'is_admin':
+            has_is_admin = True
     
-    # No need to add is_admin column as we're using the role column instead
-    # The is_admin property in the model returns true if role == 'admin'
+    # Add the password_hash column if it doesn't exist
+    if not has_password_hash:
+        op.add_column('users', sa.Column('password_hash', sa.String(256), nullable=True))
+        # Copy data from hashed_password to password_hash
+        op.execute(
+            """
+            UPDATE users 
+            SET password_hash = hashed_password
+            WHERE password_hash IS NULL AND hashed_password IS NOT NULL
+            """
+        )
+    
+    # Add the is_admin column if it doesn't exist
+    if not has_is_admin:
+        op.add_column('users', sa.Column('is_admin', sa.Boolean(), nullable=True))
+        # Set is_admin based on role
+        op.execute(
+            """
+            UPDATE users 
+            SET is_admin = (role = 'admin')
+            WHERE is_admin IS NULL
+            """
+        )
 
 
 def downgrade():
-    # We don't remove the compatibility columns during downgrade
-    # as they're needed for backward compatibility
-    pass
+    """Remove compatibility columns"""
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    
+    # Check if columns exist before trying to remove them
+    if 'password_hash' in [c['name'] for c in inspector.get_columns('users')]:
+        op.drop_column('users', 'password_hash')
+    
+    if 'is_admin' in [c['name'] for c in inspector.get_columns('users')]:
+        op.drop_column('users', 'is_admin')

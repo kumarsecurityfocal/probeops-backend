@@ -1,32 +1,46 @@
 #!/bin/bash
-# Script to test Flask-Migrate in Docker container
+# ProbeOps Migration Test Script
+# This script validates the migration process without rebuilding containers
 
 set -e  # Exit on error
 
 echo "======================================"
-echo "Testing Flask-Migrate in Docker"
+echo "ProbeOps Migration Test Script"
 echo "======================================"
 
-# Step 1: Check if Flask-Migrate is installed
-echo "Step 1: Checking if Flask-Migrate is installed..."
-docker compose -f docker-compose.backend.yml exec api pip freeze | grep Flask-Migrate
+# Check if the API container is running
+container_id=$(docker compose -f docker-compose.backend.yml ps -q api)
+if [ -z "$container_id" ]; then
+    echo "API container not running. Start it with docker compose -f docker-compose.backend.yml up -d"
+    exit 1
+fi
 
-# Step 2: Check if migrations directory exists
-echo "Step 2: Checking if migrations directory exists..."
-docker compose -f docker-compose.backend.yml exec api ls -la /app/migrations
+# Set FLASK_APP environment variable
+echo "Setting up environment in container..."
+docker compose -f docker-compose.backend.yml exec -T api bash -c 'export FLASK_APP=probeops.app'
 
-# Step 3: Test flask db commands
-echo "Step 3: Testing flask db commands..."
-docker compose -f docker-compose.backend.yml exec api flask db --help
+# Generate migration
+echo "Attempting to generate migration..."
+docker compose -f docker-compose.backend.yml exec -T api flask db migrate -m "Test migration $(date +%Y%m%d%H%M%S)"
 
-# Step 4: Test migration commands
-echo "Step 4: Testing migration commands..."
-echo "   - Current revision:"
-docker compose -f docker-compose.backend.yml exec api flask db current
+# Show migrations
+echo "Listing migrations..."
+docker compose -f docker-compose.backend.yml exec -T api flask db show
 
-echo "Step 5: Testing migration history..."
-docker compose -f docker-compose.backend.yml exec api flask db history
+# Apply migrations
+echo "Applying migrations..."
+docker compose -f docker-compose.backend.yml exec -T api flask db upgrade
+
+# Verify database schema
+echo "Verifying database schema..."
+docker compose -f docker-compose.backend.yml exec -T api flask db check
+
+# Test database access via the API
+echo "Testing database access via health endpoint..."
+curl -s http://localhost:5000/api/health | grep -q '"status":"ok"' && \
+    echo "API health check passed!" || \
+    echo "API health check failed!"
 
 echo "======================================"
-echo "Migration tests completed"
+echo "Migration test completed!"
 echo "======================================"
