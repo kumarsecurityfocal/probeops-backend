@@ -39,6 +39,10 @@ logger = logging.getLogger(__name__)
 # Create the Flask application
 app = Flask(__name__)
 
+# Enable debug mode and exception propagation
+app.config["PROPAGATE_EXCEPTIONS"] = True
+app.config["DEBUG"] = True
+
 # Configure CORS to allow requests from specified origins or use defaults
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
 if cors_origins_env:
