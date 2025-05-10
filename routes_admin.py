@@ -2,7 +2,7 @@
 Admin management routes for ProbeOps API
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 from flask import Blueprint, request, jsonify, current_app, g
 from sqlalchemy.exc import IntegrityError
@@ -173,7 +173,7 @@ def toggle_user_active_status(user_id):
     current_user = get_current_user()
     
     # Prevent users from deactivating themselves (security measure)
-    if user.id == current_user.id:
+    if current_user and user.id == current_user.id:
         return jsonify({"error": "You cannot change your own active status"}), 403
     
     data = request.json
@@ -206,33 +206,85 @@ def list_all_users():
     # Get filter parameters
     role = request.args.get("role")
     tier = request.args.get("tier")
+    active_status = request.args.get("active")
+    search_query = request.args.get("q")
     limit = int(request.args.get("limit", 50))
     offset = int(request.args.get("offset", 0))
+    sort_by = request.args.get("sort", "id")
+    sort_order = request.args.get("order", "asc")
     
     # Build query with optional filters
     query = User.query
     
+    # Apply role filter
     if role:
         if role not in User.VALID_ROLES:
             return jsonify({"error": f"Invalid role filter. Must be one of: {', '.join(User.VALID_ROLES)}"}), 400
         query = query.filter_by(role=role)
     
+    # Apply tier filter
     if tier:
         if tier not in User.VALID_TIERS:
             return jsonify({"error": f"Invalid tier filter. Must be one of: {', '.join(User.VALID_TIERS)}"}), 400
         query = query.filter_by(subscription_tier=tier)
     
+    # Apply active status filter
+    if active_status is not None:
+        is_active = active_status.lower() in ['true', '1', 'yes']
+        query = query.filter_by(is_active=is_active)
+    
+    # Apply search query if provided
+    if search_query:
+        search_term = f"%{search_query}%"
+        # Search by username or email
+        query = query.filter(db.or_(
+            User.username.ilike(search_term),
+            User.email.ilike(search_term)
+        ))
+    
+    # Apply sorting
+    if sort_by == "username":
+        if sort_order.lower() == "desc":
+            query = query.order_by(User.username.desc())
+        else:
+            query = query.order_by(User.username.asc())
+    elif sort_by == "email":
+        if sort_order.lower() == "desc":
+            query = query.order_by(User.email.desc())
+        else:
+            query = query.order_by(User.email.asc())
+    elif sort_by == "created_at":
+        if sort_order.lower() == "desc":
+            query = query.order_by(User.created_at.desc())
+        else:
+            query = query.order_by(User.created_at.asc())
+    else:  # Default: sort by ID
+        if sort_order.lower() == "desc":
+            query = query.order_by(User.id.desc())
+        else:
+            query = query.order_by(User.id.asc())
+    
     # Get total count for pagination
     total = query.count()
     
     # Apply pagination and get users
-    users = query.order_by(User.id).limit(limit).offset(offset).all()
+    users = query.limit(limit).offset(offset).all()
     
-    # Return with pagination metadata
+    # Return with pagination metadata and filter information
     return jsonify({
         "total": total,
         "offset": offset,
         "limit": limit,
+        "filters": {
+            "role": role,
+            "tier": tier,
+            "active": active_status,
+            "search": search_query
+        },
+        "sort": {
+            "field": sort_by,
+            "order": sort_order
+        },
         "users": [user.to_dict() for user in users]
     })
 
@@ -261,15 +313,71 @@ def get_user_details(user_id):
     latest_probe = db.session.query(db.func.max(ProbeJob.created_at)).filter_by(user_id=user.id).scalar()
     latest_activity = latest_probe.isoformat() if latest_probe else None
     
+    # Get recent probe history (last 10 probes)
+    recent_probes = ProbeJob.query.filter_by(user_id=user.id).order_by(ProbeJob.created_at.desc()).limit(10).all()
+    
+    # Get API key usage metrics
+    api_key_usage = []
+    for key in api_keys:
+        # Count probes per API key (requires filtering by API key in the actual application logs)
+        # Here we're using a simplified approach
+        usage = {
+            "key_id": key.id,
+            "key_description": key.description or "No description",
+            "last_used": key.last_used_at.isoformat() if key.last_used_at else None,
+            "is_active": key.is_active
+        }
+        api_key_usage.append(usage)
+    
+    # Calculate activity metrics
+    today = datetime.utcnow().date()
+    one_day_ago = today - timedelta(days=1)
+    one_week_ago = today - timedelta(days=7)
+    one_month_ago = today - timedelta(days=30)
+    
+    # Count probes in different time periods
+    probes_today = ProbeJob.query.filter(
+        ProbeJob.user_id == user.id,
+        ProbeJob.created_at >= datetime.combine(today, datetime.min.time())
+    ).count()
+    
+    probes_last_day = ProbeJob.query.filter(
+        ProbeJob.user_id == user.id,
+        ProbeJob.created_at >= datetime.combine(one_day_ago, datetime.min.time())
+    ).count()
+    
+    probes_last_week = ProbeJob.query.filter(
+        ProbeJob.user_id == user.id,
+        ProbeJob.created_at >= datetime.combine(one_week_ago, datetime.min.time())
+    ).count()
+    
+    probes_last_month = ProbeJob.query.filter(
+        ProbeJob.user_id == user.id,
+        ProbeJob.created_at >= datetime.combine(one_month_ago, datetime.min.time())
+    ).count()
+    
+    # Calculate success rate
+    successful_probes = ProbeJob.query.filter_by(user_id=user.id, success=True).count()
+    success_rate = (successful_probes / total_probes * 100) if total_probes > 0 else 0
+    
     return jsonify({
         "user": user.to_dict(),
         "api_keys": [key.to_dict() for key in api_keys],
+        "api_key_usage": api_key_usage,
         "stats": {
             "total_api_keys": len(api_keys),
             "total_probes": total_probes,
             "probe_counts": probe_counts,
-            "latest_activity": latest_activity
-        }
+            "latest_activity": latest_activity,
+            "activity_metrics": {
+                "probes_today": probes_today,
+                "probes_last_day": probes_last_day,
+                "probes_last_week": probes_last_week,
+                "probes_last_month": probes_last_month
+            },
+            "success_rate": round(success_rate, 2)
+        },
+        "recent_probes": [probe.to_dict() for probe in recent_probes]
     })
 
 
