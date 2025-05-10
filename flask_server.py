@@ -673,8 +673,8 @@ def admin_required(f):
                 "message": "Please provide a valid JWT token or API key."
             }), 401
         
-        # Check for admin using the is_admin field (production compatible)
-        if not current_user.is_admin:
+        # Use is_admin_user() which checks role==admin
+        if not current_user.is_admin_user():
             return jsonify({
                 "error": "Forbidden", 
                 "message": "Admin privileges required."
@@ -1204,7 +1204,7 @@ def setup_database():
                 username="admin",
                 email="admin@probeops.com",
                 is_active=True,
-                is_admin=True,  # Set admin flag - compatible with production schema
+                role=User.ROLE_ADMIN,  # Set admin role - compatible with production schema
                 subscription_tier=User.TIER_ENTERPRISE  # Default to highest tier for admin
             )
             admin.password = "administrator"  # This will be hashed
@@ -1222,8 +1222,8 @@ def setup_database():
             logger.info(f"Created default admin user with API key: {api_key.key}")
         else:
             # Update existing admin user to ensure they have admin role and enterprise tier
-            if not admin.is_admin or admin.subscription_tier != User.TIER_ENTERPRISE:
-                admin.is_admin = True
+            if not admin.is_admin_user() or admin.subscription_tier != User.TIER_ENTERPRISE:
+                admin.role = User.ROLE_ADMIN
                 admin.subscription_tier = User.TIER_ENTERPRISE
                 db.session.commit()
                 logger.info("Updated existing admin user with correct role and tier")
