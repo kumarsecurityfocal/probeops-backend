@@ -111,7 +111,6 @@ def register_auth_routes(bp):
         # Debug info - DO NOT include this in production code!
         logger.info(f"Found user: id={user.id}, username={user.username}, active={user.is_active}")
         logger.info(f"Hash types - hashed_password: {user.hashed_password[:20] if user.hashed_password else 'None'}")
-        logger.info(f"Hash types - password_hash: {user.password_hash[:20] if user.password_hash else 'None'}")
         
         # ======================= TEMPORARY FIX FOR TESTING =======================
         # NOTE: This is a temporary fix to allow testing of the API endpoints.
