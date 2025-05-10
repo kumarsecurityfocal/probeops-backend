@@ -391,9 +391,12 @@ class User(db.Model):
                 
     def verify_password(self, password):
         """Check if password matches"""
-        # Use hashed_password for verification
-        if self.hashed_password:
-            return check_password_hash(self.hashed_password, password)
+        # Try to verify using hashed_password (bcrypt format)
+        if self.hashed_password and self.hashed_password.startswith('$2b$'):
+            return bcrypt_sha256.verify(password, self.hashed_password)
+        # Fall back to password_hash for compatibility
+        if hasattr(self, 'password_hash') and self.password_hash:
+            return check_password_hash(self.password_hash, password)
         return False
     
     def to_dict(self):
