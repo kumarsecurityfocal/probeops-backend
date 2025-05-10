@@ -363,15 +363,106 @@ def register_probe_routes(bp):
     @login_required
     def whois_probe():
         """Run WHOIS lookup on a domain"""
-        # To be implemented
-        return jsonify({"message": "WHOIS lookup endpoint"}), 501
+        # Import required functions
+        from probeops.services.probe import run_whois, save_probe_job, format_response
+        
+        # Get request data
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        # Check required fields
+        domain = data.get("domain")
+        if not domain:
+            return jsonify({"error": "Missing required parameter: domain"}), 400
+            
+        # No optional parameters for WHOIS
+        parameters = {}
+        
+        try:
+            # Run the WHOIS lookup command
+            result = run_whois(domain)
+            success = "Error" not in result
+            
+            # Save job to database
+            job = save_probe_job("whois", domain, parameters, result, success)
+            
+            # Format the response
+            response = format_response(
+                success, 
+                "whois", 
+                domain, 
+                result, 
+                job.id if job else 0
+            )
+            
+            return jsonify(response)
+        except Exception as e:
+            logger.exception(f"Error in WHOIS probe: {str(e)}")
+            return jsonify(format_response(
+                False, 
+                "whois", 
+                domain, 
+                f"Error: {str(e)}", 
+                0
+            )), 500
     
     @bp.route('/history', methods=['GET'])
     @login_required
     def probe_history():
         """Get probe job history for the current user"""
-        # To be implemented
-        return jsonify({"message": "Probe history endpoint"}), 501
+        # Get current user
+        from probeops.services.auth import get_current_user
+        from probeops.models import ProbeJob
+        
+        # Get pagination parameters
+        limit = min(int(request.args.get('limit', 10)), 100)  # Default 10, max 100
+        offset = int(request.args.get('offset', 0))
+        
+        # Get current user
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "Authentication required"}), 401
+        
+        # Build query for user's probe jobs
+        try:
+            # Get total count for pagination
+            total_count = ProbeJob.query.filter_by(user_id=current_user.id).count()
+            
+            # Get probe jobs with pagination
+            probe_jobs = ProbeJob.query.filter_by(
+                user_id=current_user.id
+            ).order_by(
+                ProbeJob.created_at.desc()
+            ).limit(limit).offset(offset).all()
+            
+            # Function to build pagination URLs
+            def build_url(new_offset):
+                base_url = request.base_url
+                return f"{base_url}?limit={limit}&offset={new_offset}"
+            
+            # Build response with pagination links
+            response = {
+                "jobs": [job.to_dict() for job in probe_jobs],
+                "pagination": {
+                    "total": total_count,
+                    "limit": limit,
+                    "offset": offset,
+                    "count": len(probe_jobs)
+                }
+            }
+            
+            # Add next/prev links if applicable
+            if offset + limit < total_count:
+                response["pagination"]["next"] = build_url(offset + limit)
+            if offset > 0:
+                response["pagination"]["prev"] = build_url(max(0, offset - limit))
+            
+            return jsonify(response)
+        
+        except Exception as e:
+            logger.exception(f"Error retrieving probe history: {str(e)}")
+            return jsonify({"error": f"Error retrieving probe history: {str(e)}"}), 500
 
 
 def register_apikey_routes(bp):
