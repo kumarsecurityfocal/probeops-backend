@@ -1,0 +1,19 @@
+ps-api  | INFO:probeops.app:[4f59efac] Response: 401 POST /api/users/login
+probeops-api  | 172.18.0.2 - - [10/May/2025:11:07:02 +0000] "POST /api/users/login HTTP/1.1" 401 32 "https://probeops.com/auth" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+probeops-api  | INFO:probeops.app:[2209c062] Request: GET /api/health - IP: 127.0.0.1, Auth: No Auth, Content-Type: None, User-Agent: curl/7.88.1
+probeops-api  | INFO:probeops.app:[2209c062] Response: 200 GET /api/health
+probeops-api  | 127.0.0.1 - - [10/May/2025:11:07:04 +0000] "GET /api/health HTTP/1.1" 200 16 "-" "curl/7.88.1"
+probeops-api  | INFO:probeops.app:[60fe4378] Request: GET /api/health - IP: 127.0.0.1, Auth: No Auth, Content-Type: None, User-Agent: curl/7.88.1
+probeops-api  | INFO:probeops.app:[60fe4378] Response: 200 GET /api/health
+probeops-api  | 127.0.0.1 - - [10/May/2025:11:07:34 +0000] "GET /api/health HTTP/1.1" 200 16 "-" "curl/7.88.1"
+probeops-api  | INFO:probeops.app:[2c055d86] Request: POST /api/users/login - IP: 172.18.0.2, Auth: No Auth, Content-Type: application/json, User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36
+probeops-api  | INFO:probeops.app:[2c055d86] Request: POST /api/users/login - IP: 172.18.0.2, Auth: No Auth, Content-Type: application/json, User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36
+probeops-api  | INFO:probeops.routes:Login attempt with email: admin@probeops.com
+probeops-api  | INFO:probeops.routes:Login attempt with email: admin@probeops.com
+probeops-api  | WARNING:probeops.routes:User not found for login attempt
+probeops-api  | WARNING:probeops.routes:User not found for login attempt
+probeops-api  | INFO:probeops.app:[2c055d86] Response: 401 POST /api/users/login
+probeops-api  | INFO:probeops.app:[2c055d86] Response: 401 POST /api/users/login
+probeops-api  | 172.18.0.2 - - [10/May/2025:11:07:58 +0000] "POST /api/users/login HTTP/1.1" 401 32 "https://probeops.com/auth" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+probeops-api  | 172.18.0.2 - - [10/May/2025:11:07:58 +0000] "POST /api/users/login HTTP/1.1" 401 32 "https://probeops.com/auth" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+

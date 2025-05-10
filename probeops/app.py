@@ -27,6 +27,9 @@ db = SQLAlchemy(model_class=Base)
 migrate = Migrate()
 
 
+# Initialize database functions are defined in the create_app function
+
+
 def create_app():
     """Create and configure the Flask application"""
     app = Flask(__name__)
@@ -139,24 +142,36 @@ def create_app():
             db.session.commit()
             logger.info("Default rate limit configurations created")
         
-        # Setup admin user if none exists
-        if User.query.filter_by(role=User.ROLE_ADMIN).count() == 0:
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'password')
-            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+        # Setup test users if they don't exist
+        if User.query.filter_by(email='admin@probeops.com').first() is None:
+            logger.info("Creating default test users for API testing")
             
+            # Create admin user
             admin = User(
                 username='admin',
-                email=admin_email,
+                email='admin@probeops.com',
                 role=User.ROLE_ADMIN,
                 subscription_tier=User.TIER_ENTERPRISE,
                 is_active=True,
                 created_at=datetime.utcnow()
             )
-            admin.password = admin_password
-            
+            admin.password = 'testpass123'  # This will set both password fields correctly
             db.session.add(admin)
+            
+            # Create a standard user as well
+            standard_user = User(
+                username='standard',
+                email='standard@probeops.com',
+                role=User.ROLE_USER,
+                subscription_tier=User.TIER_STANDARD,
+                is_active=True,
+                created_at=datetime.utcnow()
+            )
+            standard_user.password = 'testpass123'
+            db.session.add(standard_user)
+            
             db.session.commit()
-            logger.info(f"Admin user created with email: {admin_email}")
+            logger.info("Test users created successfully")
         
         logger.info("Database tables created successfully")
     
