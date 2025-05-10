@@ -173,11 +173,11 @@ When a rate limit is exceeded, the API returns a 429 Too Many Requests response.
 
 | Endpoint | Method | Authentication | Description |
 |----------|--------|----------------|-------------|
-| `/api/probe/ping` | POST | JWT/API Key | Run ping on a target |
-| `/api/probe/traceroute` | POST | JWT/API Key | Run traceroute on a target |
-| `/api/probe/dns` | POST | JWT/API Key | Run DNS lookup on a domain |
-| `/api/probe/whois` | POST | JWT/API Key | Run WHOIS lookup on a domain |
-| `/api/probe/history` | GET | JWT | Get probe job history |
+| `/api/probes/ping` | POST | JWT/API Key | Run ping on a target |
+| `/api/probes/traceroute` | POST | JWT/API Key | Run traceroute on a target |
+| `/api/probes/dns` | POST | JWT/API Key | Run DNS lookup on a domain |
+| `/api/probes/whois` | POST | JWT/API Key | Run WHOIS lookup on a domain |
+| `/api/probes/history` | GET | JWT | Get probe job history |
 
 ### Admin Endpoints
 
