@@ -17,12 +17,29 @@ class User(db.Model):
     """User model for authentication"""
     __tablename__ = 'users'
     
+    # Role constants
+    ROLE_USER = 'user'
+    ROLE_ADMIN = 'admin'
+    
+    # Subscription tier constants
+    TIER_FREE = 'Free'
+    TIER_STANDARD = 'Standard'
+    TIER_ENTERPRISE = 'Enterprise'
+    
+    # Valid subscription tiers
+    VALID_TIERS = [TIER_FREE, TIER_STANDARD, TIER_ENTERPRISE]
+    
+    # Valid user roles
+    VALID_ROLES = [ROLE_USER, ROLE_ADMIN]
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    is_admin = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False)  # Legacy field, kept for backward compatibility
+    role = db.Column(db.String(20), nullable=False, default=ROLE_USER)
+    subscription_tier = db.Column(db.String(20), nullable=False, default=TIER_FREE)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
