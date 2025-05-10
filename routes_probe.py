@@ -6,6 +6,7 @@ import socket
 import time
 import random
 import logging
+import urllib.parse
 from datetime import datetime
 
 from flask import Blueprint, request, jsonify, g
@@ -511,6 +512,7 @@ def dns_probe():
 
 @bp.route("/whois", methods=["GET", "POST"])
 @login_required
+@tier_required(User.TIER_ENTERPRISE)  # Require Enterprise tier
 def whois_probe():
     """Run WHOIS lookup on a domain"""
     if request.method == "POST":
@@ -552,20 +554,81 @@ def probe_history():
     limit = int(request.args.get("limit", 20))
     offset = int(request.args.get("offset", 0))
     
+    # Get the sort parameter (default to created_at desc)
+    sort_by = request.args.get("sort_by", "created_at")
+    sort_dir = request.args.get("sort_dir", "desc")
+    
     query = ProbeJob.query.filter_by(user_id=current_user.id)
     
     if probe_type:
         query = query.filter_by(probe_type=probe_type)
     
-    total = query.count()
-    jobs = query.order_by(ProbeJob.created_at.desc()).limit(limit).offset(offset).all()
+    # Apply sorting - default to created_at desc if invalid parameters
+    valid_sort_fields = ["id", "probe_type", "target", "created_at", "success"]
+    if sort_by not in valid_sort_fields:
+        sort_by = "created_at"
     
-    response = jsonify({
+    # Get the sort attribute from the model
+    sort_attr = getattr(ProbeJob, sort_by)
+    
+    # Apply the sort direction
+    if sort_dir.lower() == "asc":
+        query = query.order_by(sort_attr.asc())
+    else:
+        query = query.order_by(sort_attr.desc())
+    
+    # Get the total count for pagination
+    total = query.count()
+    
+    # Apply pagination
+    jobs = query.limit(limit).offset(offset).all()
+    
+    # Calculate pagination metadata
+    page_count = (total + limit - 1) // limit if limit > 0 else 1
+    current_page = (offset // limit) + 1 if limit > 0 else 1
+    
+    # Build pagination navigation URLs
+    base_url = request.path
+    query_params = request.args.copy()
+    
+    # Function to build URL with updated offset
+    def build_url(new_offset):
+        query_params["offset"] = new_offset
+        params_str = "&".join([f"{k}={v}" for k, v in query_params.items()])
+        return f"{base_url}?{params_str}"
+    
+    # Add pagination links
+    next_link = build_url(offset + limit) if offset + limit < total else None
+    prev_link = build_url(max(0, offset - limit)) if offset > 0 else None
+    first_link = build_url(0)
+    last_link = build_url((page_count - 1) * limit) if page_count > 0 else build_url(0)
+    
+    # Standard tier and above get additional metadata and navigation links
+    response_data = {
         "total": total,
         "offset": offset,
         "limit": limit,
         "jobs": [job.to_dict() for job in jobs]
-    })
+    }
+    
+    # Add enhanced features for higher tier users
+    if current_user.has_tier(User.TIER_STANDARD):
+        response_data.update({
+            "page_count": page_count,
+            "current_page": current_page,
+            "links": {
+                "next": next_link,
+                "prev": prev_link,
+                "first": first_link,
+                "last": last_link
+            },
+            "sort": {
+                "field": sort_by,
+                "direction": sort_dir
+            }
+        })
+    
+    response = jsonify(response_data)
     # Ensure proper Content-Type header
     response.headers['Content-Type'] = 'application/json'
     return response
