@@ -925,7 +925,10 @@ def setup_database():
             admin = User(
                 username="admin",
                 email="admin@probeops.com",
-                is_active=True
+                is_active=True,
+                is_admin=True,  # Legacy field
+                role=User.ROLE_ADMIN,  # New RBAC field
+                subscription_tier=User.TIER_ENTERPRISE  # Default to highest tier for admin
             )
             admin.password = "administrator"  # This will be hashed
             db.session.add(admin)
@@ -940,6 +943,14 @@ def setup_database():
             
             db.session.commit()
             logger.info(f"Created default admin user with API key: {api_key.key}")
+        else:
+            # Update existing admin user to ensure they have admin role and enterprise tier
+            if admin.role != User.ROLE_ADMIN or admin.subscription_tier != User.TIER_ENTERPRISE:
+                admin.is_admin = True
+                admin.role = User.ROLE_ADMIN
+                admin.subscription_tier = User.TIER_ENTERPRISE
+                db.session.commit()
+                logger.info("Updated existing admin user with correct role and tier")
     except Exception as e:
         logger.error(f"Error setting up database: {str(e)}")
         db.session.rollback()
@@ -951,10 +962,12 @@ with app.app_context():
 # Import and register the API Blueprint
 from api_blueprint import api_bp
 from routes_ui import ui_blueprint
+from routes_admin import bp as admin_bp
 
 # Register the blueprints with the app
 app.register_blueprint(api_bp)
 app.register_blueprint(ui_blueprint)
+app.register_blueprint(admin_bp, url_prefix='/api/admin')
 
 # Create proxied Blueprint routes
 # This creates duplicate routes under /api prefix for compatibility
@@ -1003,6 +1016,27 @@ def proxy_whois_probe():
 @api_proxy_bp.route('/probes/history', methods=["GET"])
 def proxy_probe_history():
     return probe_history()
+
+# Admin routes proxies
+@api_proxy_bp.route('/admin/login', methods=["POST"])
+def proxy_admin_login():
+    from routes_admin import admin_login
+    return admin_login()
+
+@api_proxy_bp.route('/admin/users/<int:user_id>/promote', methods=["POST"])
+def proxy_promote_user(user_id):
+    from routes_admin import promote_user
+    return promote_user(user_id)
+
+@api_proxy_bp.route('/admin/users/<int:user_id>/tier', methods=["POST"])
+def proxy_update_subscription_tier(user_id):
+    from routes_admin import update_subscription_tier
+    return update_subscription_tier(user_id)
+
+@api_proxy_bp.route('/admin/status', methods=["GET"])
+def proxy_admin_status():
+    from routes_admin import admin_status
+    return admin_status()
 
 # Register the API proxy blueprint
 app.register_blueprint(api_proxy_bp)
@@ -1073,7 +1107,10 @@ def register():
         user = User(
             username=data["username"],
             email=data["email"],
-            is_active=True
+            is_active=True,
+            is_admin=False,  # Legacy field
+            role=User.ROLE_USER,  # Default role
+            subscription_tier=User.TIER_FREE  # Default tier
         )
         user.password = data["password"]  # This will be hashed
         
