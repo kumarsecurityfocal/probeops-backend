@@ -492,13 +492,12 @@ def update_rate_limit(tier):
     
     # If no config exists, create a new one
     if not config:
-        config = RateLimitConfig(
-            tier=tier,
-            daily_limit=data["daily_limit"],
-            monthly_limit=data["monthly_limit"],
-            min_interval_minutes=data["min_interval_minutes"],
-            updated_by_user_id=current_user.id if current_user else None
-        )
+        config = RateLimitConfig()
+        config.tier = tier
+        config.daily_limit = data["daily_limit"]
+        config.monthly_limit = data["monthly_limit"]
+        config.min_interval_minutes = data["min_interval_minutes"]
+        config.updated_by_user_id = current_user.id if current_user else None
         db.session.add(config)
     else:
         # Update existing config

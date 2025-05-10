@@ -201,26 +201,29 @@ def get_rate_limit_for_tier(tier):
         # Use the default for this tier, or fall back to Free tier defaults
         tier_config = defaults.get(tier, defaults.get(User.TIER_FREE))
         
-        # Create entry in database for next time
-        try:
-            config = RateLimitConfig(
-                tier=tier,
-                daily_limit=tier_config['daily_limit'],
-                monthly_limit=tier_config['monthly_limit'],
-                min_interval_minutes=tier_config['min_interval_minutes']
-            )
-            db.session.add(config)
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Error creating rate limit config for tier {tier}: {str(e)}")
-            db.session.rollback()
-            
-            # Return default values if database operation fails
-            return (
-                tier_config['daily_limit'], 
-                tier_config['monthly_limit'], 
-                tier_config['min_interval_minutes']
-            )
+        if tier_config:
+            # Create entry in database for next time
+            try:
+                config = RateLimitConfig()
+                config.tier = tier
+                config.daily_limit = tier_config['daily_limit']
+                config.monthly_limit = tier_config['monthly_limit']
+                config.min_interval_minutes = tier_config['min_interval_minutes']
+                db.session.add(config)
+                db.session.commit()
+            except Exception as e:
+                logger.error(f"Error creating rate limit config for tier {tier}: {str(e)}")
+                db.session.rollback()
+                
+                # Return default values if database operation fails
+                return (
+                    tier_config['daily_limit'], 
+                    tier_config['monthly_limit'], 
+                    tier_config['min_interval_minutes']
+                )
+        else:
+            # Fallback to hardcoded defaults if no tier config found
+            return (100, 1000, 15)  # Free tier defaults
     
     return (config.daily_limit, config.monthly_limit, config.min_interval_minutes)
 
