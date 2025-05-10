@@ -1,0 +1,48 @@
+ubuntu@ip-172-16-0-80:~/probeops-backend$ ./fix_user_emails.sh
+Fixing missing email fields for admin and standard users...
+Using Python command: python3
+Method 1: Using direct database access...
+ERROR: Could not import User model. Make sure you're running this from the correct directory.
+
+Method 2: Using Flask CLI...
+Error: While importing 'fix_user_emails_flask', an ImportError was raised:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/probeops-backend/fix_user_emails_flask.py", line 10, in <module>
+    from main import app
+  File "/home/ubuntu/probeops-backend/main.py", line 5, in <module>
+    from flask_migrate import Migrate
+ModuleNotFoundError: No module named 'flask_migrate'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/probeops-backend/fix_user_emails_flask.py", line 21, in <module>
+    from probeops.models import db, User
+  File "/home/ubuntu/probeops-backend/probeops/models.py", line 13, in <module>
+    from probeops.app import db
+  File "/home/ubuntu/probeops-backend/probeops/app.py", line 8, in <module>
+    from flask_sqlalchemy import SQLAlchemy
+ModuleNotFoundError: No module named 'flask_sqlalchemy'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/flask/cli.py", line 256, in locate_app
+    __import__(module_name)
+  File "/home/ubuntu/probeops-backend/fix_user_emails_flask.py", line 23, in <module>
+    from models import db, User
+  File "/home/ubuntu/probeops-backend/models.py", line 9, in <module>
+    from flask_sqlalchemy import SQLAlchemy
+ModuleNotFoundError: No module named 'flask_sqlalchemy'
+
+
+Usage: python -m flask [OPTIONS] COMMAND [ARGS]...
+Try 'python -m flask --help' for help.
+
+Error: No such command 'fix-user-emails'.
+
+User email fix process complete.
+Try logging in with:
+- Email: admin@probeops.com, Password: probeopS1@
+- Email: standard@probeops.com, Password: probeopS1@
