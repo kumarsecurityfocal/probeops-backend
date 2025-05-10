@@ -3,10 +3,15 @@ API key management routes for ProbeOps API
 """
 import logging
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 
-from models import db, ApiKey
-from auth import login_required, admin_required, current_user
+# Import directly from flask_server (which is the primary implementation)
+from flask_server import db, User, ApiKey, login_required, admin_required, role_required, tier_required
+
+# Helper function to get current user
+def get_current_user():
+    """Utility to get current user from g"""
+    return g.current_user if hasattr(g, 'current_user') else None
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,8 +24,10 @@ bp = Blueprint("apikeys", __name__, url_prefix="/apikeys")
 @login_required
 def list_apikeys():
     """List API keys for the current user"""
+    current_user = get_current_user()
+    
     # Admin can see all keys with user information
-    if current_user.is_admin and request.args.get("all") == "true":
+    if current_user.is_admin_user() and request.args.get("all") == "true":
         keys = ApiKey.query.all()
         return jsonify({
             "api_keys": [{
@@ -44,6 +51,7 @@ def list_apikeys():
 @login_required
 def create_apikey():
     """Create a new API key for the current user"""
+    current_user = get_current_user()
     data = request.json or {}
     description = data.get("description", "API key")
     
@@ -72,8 +80,10 @@ def create_apikey():
 @login_required
 def get_apikey(key_id):
     """Get API key by ID"""
+    current_user = get_current_user()
+    
     # Admin can see any key
-    if current_user.is_admin:
+    if current_user.is_admin_user():
         key = ApiKey.query.get(key_id)
     else:
         # Regular users can only see their own keys

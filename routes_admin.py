@@ -4,11 +4,16 @@ Admin management routes for ProbeOps API
 import logging
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, g
 from sqlalchemy.exc import IntegrityError
 
-from models import db, User, ApiKey
-from auth import login_required, admin_required, current_user, create_jwt_token
+# Import directly from flask_server (which is the primary implementation)
+from flask_server import db, User, ApiKey, login_required, admin_required, role_required, tier_required, create_jwt_token
+
+# Helper function to get current user
+def get_current_user():
+    """Utility to get current user from g"""
+    return g.current_user if hasattr(g, 'current_user') else None
 
 # Configure logging
 logger = logging.getLogger(__name__)
